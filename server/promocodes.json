@@ -1,0 +1,29 @@
+[
+  {
+    "code": "WELCOME2026",
+    "reward": {
+      "type": "starJewels",
+      "amount": 500
+    },
+    "expiresAt": "2026-12-31T23:59:59Z",
+    "usageLimit": "single"
+  },
+  {
+    "code": "FREECOINS",
+    "reward": {
+      "type": "coins",
+      "amount": 10000
+    },
+    "expiresAt": "2026-06-30T23:59:59Z",
+    "usageLimit": "multiple"
+  },
+  {
+    "code": "STAMINA50",
+    "reward": {
+      "type": "staminaDrinks",
+      "amount": 5
+    },
+    "expiresAt": "2026-12-31T23:59:59Z",
+    "usageLimit": "single"
+  }
+]

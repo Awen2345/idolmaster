@@ -64,6 +64,14 @@ export async function setupDatabase() {
       claimed BOOLEAN DEFAULT 0,
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS user_promocodes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      code TEXT,
+      used_at TEXT,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
   `);
 
   // Add attribute column if it doesn't exist (for migration)

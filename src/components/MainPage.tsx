@@ -6,11 +6,14 @@ import {
 } from 'lucide-react';
 import { NavBtn, StatusBox, StatusBar } from './Shared';
 import { MenuOverlay } from './MenuOverlay';
+import { PromoCodeModal } from './PromoCodeModal';
+import { FloatingPromoButton } from './FloatingPromoButton';
 import { Card, UserState } from '../types';
 
-export function MainPage({ onNavigate, formation, userState }: { onNavigate: (page: string) => void, formation: (Card | null)[], userState: UserState | null }) {
+export function MainPage({ onNavigate, formation, userState, userId, onRefresh }: { onNavigate: (page: string) => void, formation: (Card | null)[], userState: UserState | null, userId: number, onRefresh: () => void }) {
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isPromoOpen, setIsPromoOpen] = useState(false);
 
   // Filter out nulls to display only assigned cards
   const cards = formation.filter((c): c is Card => c !== null);
@@ -158,6 +161,21 @@ export function MainPage({ onNavigate, formation, userState }: { onNavigate: (pa
 
         <AnimatePresence>
           {isMenuOpen && <MenuOverlay onClose={() => setIsMenuOpen(false)} onNavigate={onNavigate} />}
+        </AnimatePresence>
+
+        <FloatingPromoButton onClick={() => setIsPromoOpen(true)} />
+        <AnimatePresence>
+          {isPromoOpen && (
+            <PromoCodeModal 
+              onClose={() => setIsPromoOpen(false)} 
+              userId={userId} 
+              onSuccess={() => {
+                onRefresh();
+                // Optional: Close modal on success or keep it open for more codes?
+                // Usually keep it open so they can enter more.
+              }} 
+            />
+          )}
         </AnimatePresence>
       </div>
     </div>

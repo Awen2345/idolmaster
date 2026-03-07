@@ -291,16 +291,82 @@ router.get("/inbox/:id", async (req, res) => {
   res.json(inbox);
 });
 
-router.post("/inbox/claim/:id", async (req, res) => {
-  const db = await setupDatabase();
-  const userId = req.params.id;
-  const { rewardIds } = req.body; // Array of inbox IDs
+  router.post("/inbox/claim/:id", async (req, res) => {
+    const db = await setupDatabase();
+    const userId = req.params.id;
+    const { rewardIds } = req.body; // Array of inbox IDs
+  
+    for (const id of rewardIds) {
+      await db.run("UPDATE inbox SET claimed = 1 WHERE id = ? AND user_id = ?", [id, userId]);
+    }
+    res.json({ success: true });
+  });
 
-  for (const id of rewardIds) {
-    await db.run("UPDATE inbox SET claimed = 1 WHERE id = ? AND user_id = ?", [id, userId]);
-  }
-  res.json({ success: true });
-});
+  router.post("/promocode/redeem", async (req, res) => {
+    const db = await setupDatabase();
+    const { userId, code } = req.body;
+
+    if (!userId || !code) {
+      return res.status(400).json({ error: "Missing userId or code" });
+    }
+
+    const promoPath = path.join(process.cwd(), "server", "promocodes.json");
+    if (!fs.existsSync(promoPath)) {
+      return res.status(500).json({ error: "Promo codes config not found" });
+    }
+
+    const promoCodes = JSON.parse(fs.readFileSync(promoPath, "utf-8"));
+    const promo = promoCodes.find(p => p.code === code);
+
+    if (!promo) {
+      return res.status(404).json({ error: "Invalid promo code" });
+    }
+
+    // Check expiration
+    if (new Date(promo.expiresAt) < new Date()) {
+      return res.status(400).json({ error: "Promo code expired" });
+    }
+
+    // Check usage limit
+    if (promo.usageLimit === "single") {
+      const used = await db.get("SELECT * FROM user_promocodes WHERE user_id = ? AND code = ?", [userId, code]);
+      if (used) {
+        return res.status(400).json({ error: "You have already used this promo code" });
+      }
+    }
+
+    // Apply reward
+    const user = await db.get("SELECT * FROM users WHERE id = ?", [userId]);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    let updateQuery = "";
+    let params = [];
+    let rewardMessage = "";
+
+    if (promo.reward.type === "starJewels") {
+      updateQuery = "UPDATE users SET starJewels = starJewels + ? WHERE id = ?";
+      params = [promo.reward.amount, userId];
+      rewardMessage = `${promo.reward.amount} Star Jewels`;
+    } else if (promo.reward.type === "coins") {
+      updateQuery = "UPDATE users SET coins = coins + ? WHERE id = ?";
+      params = [promo.reward.amount, userId];
+      rewardMessage = `${promo.reward.amount} Coins`;
+    } else if (promo.reward.type === "staminaDrinks") {
+      updateQuery = "UPDATE users SET staminaDrinks = staminaDrinks + ? WHERE id = ?";
+      params = [promo.reward.amount, userId];
+      rewardMessage = `${promo.reward.amount} Stamina Drinks`;
+    } else {
+      return res.status(500).json({ error: "Unknown reward type" });
+    }
+
+    await db.run(updateQuery, params);
+    await db.run("INSERT INTO user_promocodes (user_id, code, used_at) VALUES (?, ?, ?)", [userId, code, new Date().toISOString()]);
+
+    res.json({ success: true, message: `Redeemed ${rewardMessage}!` });
+  });
+
 
 router.get("/cards", async (req, res) => {
   const db = await setupDatabase();

@@ -18,6 +18,18 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
   const [availableCards, setAvailableCards] = useState<Card[]>([]);
   const [timeLeft, setTimeLeft] = useState<string>("");
 
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (showHistory) {
+      fetch(`/api/gacha/history/${userId}`)
+        .then(res => res.json())
+        .then(data => setHistory(data))
+        .catch(err => console.error("Failed to fetch history", err));
+    }
+  }, [showHistory, userId]);
+
   useEffect(() => {
     fetch('/api/gacha/config')
       .then(res => res.json())
@@ -175,6 +187,12 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
             >
               <Info size={20} />
             </button>
+            <button 
+              onClick={() => setShowHistory(true)}
+              className="absolute top-2 left-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors"
+            >
+              <RefreshCw size={20} />
+            </button>
           </div>
 
           {/* Gacha Buttons */}
@@ -220,7 +238,7 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
         </div>
 
         <AnimatePresence>
-          {isMenuOpen && <MenuOverlay onClose={() => setIsMenuOpen(false)} onNavigate={onNavigate} />}
+          {isMenuOpen && <MenuOverlay onClose={() => setIsMenuOpen(false)} onNavigate={onNavigate} userId={userId} />}
           
           {/* Pull Results Modal */}
           {pullResults && (
@@ -268,6 +286,67 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
               >
                 OK
               </button>
+            </motion.div>
+          )}
+
+          {/* History Modal */}
+          {showHistory && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-40 bg-black/80 flex flex-col p-4"
+            >
+              <div className="bg-white rounded-xl overflow-hidden flex flex-col h-full shadow-2xl">
+                <div className="bg-gradient-to-r from-gray-700 to-gray-900 p-3 flex justify-between items-center">
+                  <h3 className="text-white font-bold">Gacha History</h3>
+                  <button onClick={() => setShowHistory(false)} className="text-white hover:text-gray-300">
+                    <X size={24} />
+                  </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto bg-gray-50 p-0">
+                  {history.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500">No history found.</div>
+                  ) : (
+                    <table className="w-full text-sm border-collapse">
+                      <thead className="bg-gray-200 sticky top-0 z-10">
+                        <tr>
+                          <th className="p-2 text-left text-xs font-bold text-gray-600 border-b border-gray-300">Date</th>
+                          <th className="p-2 text-left text-xs font-bold text-gray-600 border-b border-gray-300">Banner</th>
+                          <th className="p-2 text-left text-xs font-bold text-gray-600 border-b border-gray-300">Card</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map((item, i) => (
+                          <tr key={i} className="border-b border-gray-200 hover:bg-gray-100">
+                            <td className="p-2 text-[10px] text-gray-500 whitespace-nowrap">
+                              {new Date(item.pulled_at).toLocaleString()}
+                            </td>
+                            <td className="p-2 text-[10px] uppercase font-bold text-gray-600">
+                              {item.banner_type}
+                            </td>
+                            <td className="p-2 flex items-center gap-2">
+                              <div className="w-8 h-8 rounded overflow-hidden border border-gray-300 flex-shrink-0">
+                                <img src={item.img} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              </div>
+                              <div className="flex flex-col overflow-hidden">
+                                <span className={`text-[10px] font-bold truncate ${
+                                  item.rarity === 'SSR' ? 'text-pink-600' : 
+                                  item.rarity === 'SR' ? 'text-yellow-600' : 
+                                  'text-blue-600'
+                                }`}>
+                                  [{item.rarity}] {item.name}
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
             </motion.div>
           )}
 
