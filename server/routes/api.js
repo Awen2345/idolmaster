@@ -92,15 +92,49 @@ router.post("/formation/:id", async (req, res) => {
   res.json({ success: true });
 });
 
+router.get("/gacha/config", (req, res) => {
+  const configPath = path.join(process.cwd(), "server", "data", "gacha.json");
+  if (fs.existsSync(configPath)) {
+    const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    res.json(config);
+  } else {
+    res.status(500).json({ error: "Gacha config not found" });
+  }
+});
+
+router.get("/cards/available", async (req, res) => {
+  const db = await setupDatabase();
+  // Return all cards for the details page
+  // In a real app, this might be filtered by the active banner's pool
+  const cards = await db.all("SELECT * FROM cards ORDER BY rarity DESC, id DESC");
+  res.json(cards);
+});
+
 router.post("/gacha/:id", async (req, res) => {
   const db = await setupDatabase();
   const userId = req.params.id;
-  const { count } = req.body;
+  const { count, bannerType } = req.body; // bannerType: 'limited' | 'permanent'
   const cost = count * 250;
 
   const user = await db.get("SELECT starJewels FROM users WHERE id = ?", [userId]);
   if (user.starJewels < cost) {
     return res.status(400).json({ error: "Not enough Star Jewels" });
+  }
+
+  // Load Gacha Config
+  const configPath = path.join(process.cwd(), "server", "data", "gacha.json");
+  let rates = { SSR: 3, SR: 12, R: 85 };
+  let featured = [];
+
+  if (fs.existsSync(configPath)) {
+    const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    const banner = config[bannerType] || config['permanent'];
+    if (banner && banner.rates) {
+      rates = banner.rates;
+    }
+    if (banner && banner.featured) {
+      featured = banner.featured;
+    }
   }
 
   await db.run("UPDATE users SET starJewels = starJewels - ? WHERE id = ?", [cost, userId]);
@@ -112,20 +146,52 @@ router.post("/gacha/:id", async (req, res) => {
     const rand = Math.random() * 100;
     let rarity = 'R';
     
-    if (count === 10 && i === 9) {
-      const hasHighRarity = newCards.some(c => c.rarity === 'SR' || c.rarity === 'SSR');
-      if (!hasHighRarity) {
-        rarity = Math.random() * 100 < 3 ? 'SSR' : 'SR';
-      } else {
-        if (rand < 3) rarity = 'SSR';
-        else if (rand < 15) rarity = 'SR';
-      }
+    // Simple rate logic
+    // SSR: 0 to rates.SSR
+    // SR: rates.SSR to rates.SSR + rates.SR
+    // R: else
+    
+    if (rand < rates.SSR) {
+      rarity = 'SSR';
+    } else if (rand < rates.SSR + rates.SR) {
+      rarity = 'SR';
     } else {
-      if (rand < 3) rarity = 'SSR';
-      else if (rand < 15) rarity = 'SR';
+      rarity = 'R';
+    }
+    
+    // Guaranteed SR or higher for 10th pull (if count == 10)
+    if (count === 10 && i === 9) {
+       const currentHighest = newCards.reduce((acc, c) => {
+         if (c.rarity === 'SSR') return 2;
+         if (c.rarity === 'SR') return 1;
+         return acc;
+       }, 0);
+       
+       if (currentHighest === 0 && rarity === 'R') {
+         rarity = 'SR'; // Force SR if no SR/SSR yet (simplified logic, usually 10th slot is fixed rate)
+         // Or strictly: 10th pull has different rates (e.g. 97% SR, 3% SSR)
+         // Let's just ensure it's at least SR
+       }
     }
 
-    const possibleCards = allCards.filter(c => c.rarity === rarity);
+    let possibleCards = allCards.filter(c => c.rarity === rarity);
+    
+    // Rate up logic for featured cards
+    if (featured.length > 0 && rarity === 'SSR') {
+       // 50% chance to be featured if SSR (common gacha trope)
+       if (Math.random() < 0.5) {
+         const featuredCards = allCards.filter(c => featured.includes(c.id));
+         if (featuredCards.length > 0) {
+           possibleCards = featuredCards;
+         }
+       }
+    }
+
+    if (possibleCards.length === 0) {
+      // Fallback if no cards of that rarity exist in DB
+      possibleCards = allCards; 
+    }
+
     const selectedCard = possibleCards[Math.floor(Math.random() * possibleCards.length)];
     
     const result = await db.run("INSERT INTO user_inventory (user_id, card_id) VALUES (?, ?)", [userId, selectedCard.id]);

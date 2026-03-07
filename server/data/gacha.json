@@ -1,0 +1,26 @@
+{
+  "limited": {
+    "title": "Cinderella Festival",
+    "description": "Double SSR Rates! Exclusive Idols!",
+    "bannerImg": "https://hidamarirhodonite.kirara.ca/spread/100075.png",
+    "endDate": "2026-04-01T14:59:59+09:00",
+    "rates": {
+      "SSR": 6.0,
+      "SR": 12.0,
+      "R": 82.0
+    },
+    "featured": [100075, 100077, 100091, 100097, 100107]
+  },
+  "permanent": {
+    "title": "Platinum Gacha",
+    "description": "New Idols Added!",
+    "bannerImg": "https://hidamarirhodonite.kirara.ca/spread/100043.png",
+    "endDate": null,
+    "rates": {
+      "SSR": 3.0,
+      "SR": 12.0,
+      "R": 85.0
+    },
+    "featured": []
+  }
+}

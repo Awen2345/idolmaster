@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Home, Bird, Mic2, Music, RefreshCcw, Menu, ChevronLeft, Star, Info, X, Coins
 } from 'lucide-react';
 import { NavBtn } from './Shared';
 import { MenuOverlay } from './MenuOverlay';
-import { ALL_CARDS } from '../constants';
 import { Card, UserState } from '../types';
 
 export function GachaPage({ onNavigate, userState, setUserState, userId }: { onNavigate: (page: string) => void, userState: UserState, setUserState: React.Dispatch<React.SetStateAction<UserState | null>>, userId: number }) {
@@ -15,6 +14,43 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
   const [activeBanner, setActiveBanner] = useState<'limited' | 'permanent'>('limited');
   const [pullResults, setPullResults] = useState<Card[] | null>(null);
   const [isPulling, setIsPulling] = useState(false);
+  const [gachaConfig, setGachaConfig] = useState<any>(null);
+  const [availableCards, setAvailableCards] = useState<Card[]>([]);
+  const [timeLeft, setTimeLeft] = useState<string>("");
+
+  useEffect(() => {
+    fetch('/api/gacha/config')
+      .then(res => res.json())
+      .then(data => setGachaConfig(data))
+      .catch(err => console.error("Failed to fetch gacha config", err));
+
+    fetch('/api/cards/available')
+      .then(res => res.json())
+      .then(data => setAvailableCards(data))
+      .catch(err => console.error("Failed to fetch available cards", err));
+  }, []);
+
+  useEffect(() => {
+    if (gachaConfig && gachaConfig.limited && gachaConfig.limited.endDate) {
+      const interval = setInterval(() => {
+        const end = new Date(gachaConfig.limited.endDate).getTime();
+        const now = new Date().getTime();
+        const diff = end - now;
+
+        if (diff <= 0) {
+          setTimeLeft("Ended");
+          clearInterval(interval);
+        } else {
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [gachaConfig]);
 
   const performPull = async (count: number) => {
     const cost = count * 250;
@@ -29,7 +65,7 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
       const res = await fetch(`/api/gacha/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count })
+        body: JSON.stringify({ count, bannerType: activeBanner })
       });
       const data = await res.json();
 
@@ -54,6 +90,8 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
       setIsPulling(false);
     }
   };
+
+  const currentBanner = gachaConfig ? gachaConfig[activeBanner] : null;
 
   return (
     <div className="min-h-screen bg-slate-800 flex justify-center font-sans">
@@ -112,24 +150,24 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
         <div className="flex-1 overflow-y-auto bg-gray-100 relative">
           {/* Banner Image */}
           <div className="relative h-48 w-full bg-black overflow-hidden">
-            {activeBanner === 'limited' ? (
+            {currentBanner ? (
               <>
-                <img src="https://picsum.photos/seed/limitedbanner/800/400" alt="Limited Banner" className="w-full h-full object-cover opacity-80" referrerPolicy="no-referrer" />
+                <img src={currentBanner.bannerImg} alt={currentBanner.title} className="w-full h-full object-cover opacity-80" referrerPolicy="no-referrer" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
                 <div className="absolute bottom-2 left-2 right-2">
-                  <h2 className="text-white font-black text-xl italic drop-shadow-[0_2px_2px_rgba(0,0,0,1)] text-pink-300">Starlight Festival</h2>
-                  <p className="text-white text-xs font-bold drop-shadow-md">New SSR Idols Available!</p>
+                  <h2 className={`text-white font-black text-xl italic drop-shadow-[0_2px_2px_rgba(0,0,0,1)] ${activeBanner === 'limited' ? 'text-pink-300' : 'text-blue-300'}`}>
+                    {currentBanner.title}
+                  </h2>
+                  <p className="text-white text-xs font-bold drop-shadow-md">{currentBanner.description}</p>
+                  {activeBanner === 'limited' && timeLeft && (
+                     <div className="text-yellow-300 text-xs font-mono font-bold mt-1">
+                       Ends in: {timeLeft}
+                     </div>
+                  )}
                 </div>
               </>
             ) : (
-              <>
-                <img src="https://picsum.photos/seed/permanentbanner/800/400" alt="Permanent Banner" className="w-full h-full object-cover opacity-80" referrerPolicy="no-referrer" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                <div className="absolute bottom-2 left-2 right-2">
-                  <h2 className="text-white font-black text-xl italic drop-shadow-[0_2px_2px_rgba(0,0,0,1)] text-blue-300">Platinum Gacha</h2>
-                  <p className="text-white text-xs font-bold drop-shadow-md">Standard Idols Available Anytime</p>
-                </div>
-              </>
+              <div className="w-full h-full flex items-center justify-center text-white">Loading...</div>
             )}
             <button 
               onClick={() => setShowDetails(true)}
@@ -279,15 +317,21 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
                         <tbody>
                           <tr>
                             <td className="border border-gray-300 p-2 font-bold text-pink-600">SSR</td>
-                            <td className="border border-gray-300 p-2 text-right font-mono">3.000%</td>
+                            <td className="border border-gray-300 p-2 text-right font-mono">
+                              {currentBanner?.rates?.SSR?.toFixed(3)}%
+                            </td>
                           </tr>
                           <tr>
                             <td className="border border-gray-300 p-2 font-bold text-yellow-600">SR</td>
-                            <td className="border border-gray-300 p-2 text-right font-mono">12.000%</td>
+                            <td className="border border-gray-300 p-2 text-right font-mono">
+                              {currentBanner?.rates?.SR?.toFixed(3)}%
+                            </td>
                           </tr>
                           <tr>
                             <td className="border border-gray-300 p-2 font-bold text-blue-600">R</td>
-                            <td className="border border-gray-300 p-2 text-right font-mono">85.000%</td>
+                            <td className="border border-gray-300 p-2 text-right font-mono">
+                              {currentBanner?.rates?.R?.toFixed(3)}%
+                            </td>
                           </tr>
                         </tbody>
                       </table>
@@ -299,11 +343,11 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
                     <div className="space-y-4">
                       <h4 className="font-bold text-gray-800 border-b border-gray-300 pb-1">Card List & Stats</h4>
                       <div className="grid grid-cols-2 gap-2">
-                        {ALL_CARDS.map(card => (
+                        {availableCards.map(card => (
                           <div key={card.id} className="bg-white rounded border border-gray-200 overflow-hidden shadow-sm flex flex-col">
                             {/* Card Image matching original aspect ratio */}
-                            <div className="aspect-[2/3] w-full relative bg-black">
-                              <img src={card.img} alt={card.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <div className="w-full relative bg-black">
+                              <img src={card.img} alt={card.name} className="w-full h-auto object-cover" referrerPolicy="no-referrer" loading="lazy" />
                               <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[8px] p-1">
                                 <div className="font-bold truncate">{card.name}</div>
                               </div>
