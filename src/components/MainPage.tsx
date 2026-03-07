@@ -43,11 +43,11 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
         <div className="bg-gradient-to-r from-gray-800 to-gray-900 text-white px-3 py-1.5 flex justify-between items-center border-b border-gray-700 shadow-inner z-10">
           <div className="flex items-center gap-1.5 bg-black/40 px-2 py-0.5 rounded border border-gray-600">
             <Coins size={14} className="text-yellow-400" />
-            <span className="text-xs font-mono font-bold text-yellow-100">{userState.coins.toLocaleString()}</span>
+            <span className="text-xs font-mono font-bold text-yellow-100">{(userState?.coins ?? 0).toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-1.5 bg-black/40 px-2 py-0.5 rounded border border-gray-600">
             <Star size={14} className="text-pink-400" fill="currentColor" />
-            <span className="text-xs font-mono font-bold text-pink-100">{userState.starJewels.toLocaleString()}</span>
+            <span className="text-xs font-mono font-bold text-pink-100">{(userState?.starJewels ?? 0).toLocaleString()}</span>
           </div>
         </div>
 
@@ -137,7 +137,7 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
             <StatusBox icon={<Gift size={24} />} value="421" color="bg-pink-600" rounded />
           </div>
           <StatusBox text="Lesson & Training" color="bg-purple-600" flex />
-          <StatusBar label="Work" subLabel="Stamina" value={`${userState.stamina} / ${userState.maxStamina}`} color="bg-pink-500" />
+          <StatusBar label="Work" subLabel="Stamina" value={`${userState?.stamina ?? 0} / ${userState?.maxStamina ?? 0}`} color="bg-pink-500" />
           <StatusBar label="LIVE Battle" subLabel="Atk Cost" value="2 / 455" color="bg-blue-500" />
           <div onClick={() => onNavigate('formation')} className="flex-1">
             <StatusBox text="Formation" icon={<Users size={16} />} color="bg-green-500" flex />

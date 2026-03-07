@@ -17,47 +17,62 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
   const [gachaConfig, setGachaConfig] = useState<any>(null);
   const [availableCards, setAvailableCards] = useState<Card[]>([]);
   const [timeLeft, setTimeLeft] = useState<string>("");
-
-  const [showHistory, setShowHistory] = useState(false);
-  const [history, setHistory] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (showHistory) {
-      fetch(`/api/gacha/history/${userId}`)
-        .then(res => res.json())
-        .then(data => setHistory(data))
-        .catch(err => console.error("Failed to fetch history", err));
-    }
-  }, [showHistory, userId]);
+  
+  // SAFE RENDER: Add loading and error states
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/gacha/config')
-      .then(res => res.json())
-      .then(data => setGachaConfig(data))
-      .catch(err => console.error("Failed to fetch gacha config", err));
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const [configRes, cardsRes] = await Promise.all([
+          fetch('/api/gacha/config'),
+          fetch('/api/cards/available')
+        ]);
 
-    fetch('/api/cards/available')
-      .then(res => res.json())
-      .then(data => setAvailableCards(data))
-      .catch(err => console.error("Failed to fetch available cards", err));
+        if (!configRes.ok) throw new Error("Failed to fetch gacha config");
+        if (!cardsRes.ok) throw new Error("Failed to fetch available cards");
+
+        const configData = await configRes.json();
+        const cardsData = await cardsRes.json();
+
+        setGachaConfig(configData);
+        setAvailableCards(Array.isArray(cardsData) ? cardsData : []);
+      } catch (err) {
+        console.error("Gacha load error", err);
+        setError("Failed to load Gacha data. Please check your connection.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   useEffect(() => {
     if (gachaConfig && gachaConfig.limited && gachaConfig.limited.endDate) {
       const interval = setInterval(() => {
-        const end = new Date(gachaConfig.limited.endDate).getTime();
-        const now = new Date().getTime();
-        const diff = end - now;
+        try {
+          const end = new Date(gachaConfig.limited.endDate).getTime();
+          const now = new Date().getTime();
+          const diff = end - now;
 
-        if (diff <= 0) {
-          setTimeLeft("Ended");
+          if (diff <= 0) {
+            setTimeLeft("Ended");
+            clearInterval(interval);
+          } else {
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+          }
+        } catch (e) {
+          console.error("Timer error", e);
           clearInterval(interval);
-        } else {
-          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-          setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
         }
       }, 1000);
       return () => clearInterval(interval);
@@ -66,7 +81,7 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
 
   const performPull = async (count: number) => {
     const cost = count * 250;
-    if (userState.starJewels < cost) {
+    if ((userState?.starJewels ?? 0) < cost) {
       alert("Not enough Star Jewels!");
       return;
     }
@@ -79,14 +94,17 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ count, bannerType: activeBanner })
       });
+      
+      if (!res.ok) throw new Error("Network response was not ok");
+      
       const data = await res.json();
 
       if (data.success) {
         setTimeout(() => {
           setUserState(prev => prev ? ({
             ...prev,
-            starJewels: prev.starJewels - cost,
-            inventory: [...prev.inventory, ...data.newCards]
+            starJewels: (prev.starJewels ?? 0) - cost,
+            inventory: [...(prev.inventory ?? []), ...data.newCards]
           }) : null);
           
           setPullResults(data.newCards);
@@ -103,7 +121,35 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
     }
   };
 
-  const currentBanner = gachaConfig ? gachaConfig[activeBanner] : null;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-800 flex items-center justify-center font-sans">
+        <div className="text-white flex flex-col items-center gap-4">
+          <RefreshCcw className="animate-spin text-blue-400" size={32} />
+          <p className="font-bold">Loading Gacha...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-800 flex items-center justify-center font-sans">
+        <div className="bg-white p-6 rounded-xl shadow-lg max-w-sm text-center">
+          <h3 className="text-red-500 font-bold text-lg mb-2">Error</h3>
+          <p className="text-gray-700 mb-4">{error}</p>
+          <button 
+            onClick={() => onNavigate('main')}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors"
+          >
+            Return to Studio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const currentBanner = gachaConfig ? (gachaConfig[activeBanner] || gachaConfig['permanent']) : null;
 
   return (
     <div className="min-h-screen bg-slate-800 flex justify-center font-sans">
@@ -128,11 +174,11 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
         <div className="bg-gradient-to-r from-gray-800 to-gray-900 text-white px-3 py-1.5 flex justify-between items-center border-b border-gray-700 shadow-inner z-10">
           <div className="flex items-center gap-1.5 bg-black/40 px-2 py-0.5 rounded border border-gray-600">
             <Coins size={14} className="text-yellow-400" />
-            <span className="text-xs font-mono font-bold text-yellow-100">{userState.coins.toLocaleString()}</span>
+            <span className="text-xs font-mono font-bold text-yellow-100">{(userState?.coins ?? 0).toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-1.5 bg-black/40 px-2 py-0.5 rounded border border-gray-600">
             <Star size={14} className="text-pink-400" fill="currentColor" />
-            <span className="text-xs font-mono font-bold text-pink-100">{userState.starJewels.toLocaleString()}</span>
+            <span className="text-xs font-mono font-bold text-pink-100">{(userState?.starJewels ?? 0).toLocaleString()}</span>
           </div>
         </div>
 
@@ -187,12 +233,6 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
             >
               <Info size={20} />
             </button>
-            <button 
-              onClick={() => setShowHistory(true)}
-              className="absolute top-2 left-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors"
-            >
-              <RefreshCw size={20} />
-            </button>
           </div>
 
           {/* Gacha Buttons */}
@@ -238,7 +278,7 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
         </div>
 
         <AnimatePresence>
-          {isMenuOpen && <MenuOverlay onClose={() => setIsMenuOpen(false)} onNavigate={onNavigate} userId={userId} />}
+          {isMenuOpen && <MenuOverlay onClose={() => setIsMenuOpen(false)} onNavigate={onNavigate} />}
           
           {/* Pull Results Modal */}
           {pullResults && (
@@ -286,67 +326,6 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
               >
                 OK
               </button>
-            </motion.div>
-          )}
-
-          {/* History Modal */}
-          {showHistory && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-40 bg-black/80 flex flex-col p-4"
-            >
-              <div className="bg-white rounded-xl overflow-hidden flex flex-col h-full shadow-2xl">
-                <div className="bg-gradient-to-r from-gray-700 to-gray-900 p-3 flex justify-between items-center">
-                  <h3 className="text-white font-bold">Gacha History</h3>
-                  <button onClick={() => setShowHistory(false)} className="text-white hover:text-gray-300">
-                    <X size={24} />
-                  </button>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto bg-gray-50 p-0">
-                  {history.length === 0 ? (
-                    <div className="p-8 text-center text-gray-500">No history found.</div>
-                  ) : (
-                    <table className="w-full text-sm border-collapse">
-                      <thead className="bg-gray-200 sticky top-0 z-10">
-                        <tr>
-                          <th className="p-2 text-left text-xs font-bold text-gray-600 border-b border-gray-300">Date</th>
-                          <th className="p-2 text-left text-xs font-bold text-gray-600 border-b border-gray-300">Banner</th>
-                          <th className="p-2 text-left text-xs font-bold text-gray-600 border-b border-gray-300">Card</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {history.map((item, i) => (
-                          <tr key={i} className="border-b border-gray-200 hover:bg-gray-100">
-                            <td className="p-2 text-[10px] text-gray-500 whitespace-nowrap">
-                              {new Date(item.pulled_at).toLocaleString()}
-                            </td>
-                            <td className="p-2 text-[10px] uppercase font-bold text-gray-600">
-                              {item.banner_type}
-                            </td>
-                            <td className="p-2 flex items-center gap-2">
-                              <div className="w-8 h-8 rounded overflow-hidden border border-gray-300 flex-shrink-0">
-                                <img src={item.img} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                              </div>
-                              <div className="flex flex-col overflow-hidden">
-                                <span className={`text-[10px] font-bold truncate ${
-                                  item.rarity === 'SSR' ? 'text-pink-600' : 
-                                  item.rarity === 'SR' ? 'text-yellow-600' : 
-                                  'text-blue-600'
-                                }`}>
-                                  [{item.rarity}] {item.name}
-                                </span>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </div>
             </motion.div>
           )}
 

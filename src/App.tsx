@@ -10,10 +10,11 @@ import { CardListPage } from './components/CardListPage';
 import { AdminPage } from './components/AdminPage';
 import { Card, UserState } from './types';
 import { ALL_CARDS } from './constants';
+import { ErrorBoundary } from './components/ErrorBoundary'; // NEW
 
 const CLIENT_VERSION = "1.0.0";
 
-export default function App() {
+function AppContent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState<'main' | 'petit' | 'formation' | 'gacha' | 'inbox' | 'announcement' | 'cardList' | 'admin'>('main');
@@ -39,18 +40,20 @@ export default function App() {
   const fetchUserData = async (id: number) => {
     try {
       const res = await fetch(`/api/user/${id}`);
+      if (!res.ok) throw new Error("Failed to fetch user data");
       const data = await res.json();
       setUserState({
-        starJewels: data.starJewels,
-        coins: data.coins,
-        stamina: data.stamina,
-        maxStamina: data.maxStamina,
-        staminaDrinks: data.staminaDrinks,
-        inventory: data.inventory
+        starJewels: data.starJewels ?? 0,
+        coins: data.coins ?? 0,
+        stamina: data.stamina ?? 0,
+        maxStamina: data.maxStamina ?? 0,
+        staminaDrinks: data.staminaDrinks ?? 0,
+        inventory: data.inventory ?? []
       });
-      setFormation(data.formation);
+      setFormation(data.formation || [null, null, null, null, null]);
     } catch (err) {
       console.error("Failed to fetch user data", err);
+      alert("Failed to load user data. Please try again.");
     }
   };
 
@@ -58,6 +61,10 @@ export default function App() {
     setUserId(id);
     await fetchUserData(id);
     setIsLoggedIn(true);
+  };
+
+  const handleNavigate = (page: string) => {
+    setCurrentPage(page as any);
   };
 
   if (!config) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Loading...</div>;
@@ -102,57 +109,74 @@ export default function App() {
     return <LoginPage onLogin={handleLogin} />;
   }
 
-  if (currentPage === 'petit') {
-    return <PetitPage onNavigate={setCurrentPage} />;
-  }
-
-  if (currentPage === 'gacha') {
-    return <GachaPage onNavigate={setCurrentPage} userState={userState} setUserState={setUserState} userId={userId!} />;
-  }
-
-  if (currentPage === 'inbox') {
-    return <InboxPage onNavigate={setCurrentPage} userId={userId!} />;
-  }
-
-  if (currentPage === 'announcement') {
-    return <AnnouncementPage onNavigate={setCurrentPage} />;
-  }
-
-  if (currentPage === 'cardList') {
-    return <CardListPage onNavigate={setCurrentPage} />;
-  }
-
-  if (currentPage === 'admin') {
-    return <AdminPage onNavigate={setCurrentPage} />;
-  }
-
-  if (currentPage === 'formation') {
-    return (
-      <FormationPage 
-        onNavigate={setCurrentPage} 
-        initialFormation={formation} 
-        onSave={async (newFormation) => {
-          setFormation(newFormation);
-          setCurrentPage('main');
-          // Save to backend
-          await fetch(`/api/formation/${userId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ formation: newFormation.map(c => c ? c.id : null) })
-          });
-        }} 
-        inventory={userState.inventory}
-      />
-    );
-  }
+  // SAFE RENDER: Wrap pages in ErrorBoundary to isolate crashes
+  const renderPage = () => {
+    try {
+      switch (currentPage) {
+        case 'petit':
+          return <PetitPage onNavigate={handleNavigate} />;
+        case 'gacha':
+          return <GachaPage onNavigate={handleNavigate} userState={userState} setUserState={setUserState} userId={userId!} />;
+        case 'inbox':
+          return <InboxPage onNavigate={handleNavigate} userId={userId!} />;
+        case 'announcement':
+          return <AnnouncementPage onNavigate={handleNavigate} />;
+        case 'cardList':
+          return <CardListPage onNavigate={handleNavigate} />;
+        case 'admin':
+          return <AdminPage onNavigate={handleNavigate} />;
+        case 'formation':
+          return (
+            <FormationPage 
+              onNavigate={handleNavigate} 
+              initialFormation={formation} 
+              onSave={async (newFormation) => {
+                try {
+                  setFormation(newFormation);
+                  handleNavigate('main');
+                  // Save to backend
+                  await fetch(`/api/formation/${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ formation: newFormation.map(c => c ? c.id : null) })
+                  });
+                } catch (e) {
+                  console.error("Failed to save formation", e);
+                  alert("Failed to save formation");
+                }
+              }} 
+              inventory={userState.inventory}
+            />
+          );
+        case 'main':
+        default:
+          return (
+            <MainPage 
+              onNavigate={handleNavigate} 
+              formation={formation} 
+              userState={userState} 
+              userId={userId!} 
+              onRefresh={() => userId && fetchUserData(userId)}
+            />
+          );
+      }
+    } catch (error) {
+      console.error("Page render error:", error);
+      return <div className="text-white text-center p-10">Failed to load page. <button onClick={() => handleNavigate('main')} className="underline">Return to Home</button></div>;
+    }
+  };
 
   return (
-    <MainPage 
-      onNavigate={setCurrentPage} 
-      formation={formation} 
-      userState={userState} 
-      userId={userId!} 
-      onRefresh={() => userId && fetchUserData(userId)}
-    />
+    <ErrorBoundary>
+      {renderPage()}
+    </ErrorBoundary>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
   );
 }
