@@ -5,16 +5,12 @@ import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const PORT = 3000;
 
 async function setupDatabase() {
   const db = await open({
-    filename: path.join(__dirname, "database.sqlite"),
+    filename: path.join(process.cwd(), "database.sqlite"),
     driver: sqlite3.Database
   });
 
@@ -103,7 +99,7 @@ async function startServer() {
 
   // API Routes
   app.get("/api/config", (req, res) => {
-    const configPath = path.join(__dirname, "config.json");
+    const configPath = path.join(process.cwd(), "config.json");
     if (fs.existsSync(configPath)) {
       const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
       res.json(config);
