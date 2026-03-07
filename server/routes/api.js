@@ -1,7 +1,7 @@
 import express from "express";
 import fs from "fs";
 import path from "path";
-import { setupDatabase } from "./db.js";
+import { setupDatabase } from "../db.js";
 
 const router = express.Router();
 
