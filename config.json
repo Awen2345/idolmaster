@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "maintenance": false,
+  "eos": false,
+  "maintenanceMessage": "The server is currently under maintenance. Please try again later.",
+  "eosMessage": "Thank you for playing. The service has officially ended."
+}
