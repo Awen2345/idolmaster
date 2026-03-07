@@ -15,23 +15,40 @@ router.get("/config", (req, res) => {
   }
 });
 
+const BANNED_USERS_FILE = path.join(process.cwd(), "server", "data", "banned_users.json");
+
+function getBannedUsers() {
+  if (fs.existsSync(BANNED_USERS_FILE)) {
+    return JSON.parse(fs.readFileSync(BANNED_USERS_FILE, "utf-8"));
+  }
+  return {};
+}
+
+function saveBannedUsers(data) {
+  fs.writeFileSync(BANNED_USERS_FILE, JSON.stringify(data, null, 2));
+}
+
 router.post("/login", async (req, res) => {
   const db = await setupDatabase();
   const { username, password } = req.body;
   let user = await db.get("SELECT * FROM users WHERE username = ?", [username]);
   
   if (user) {
-    // Check if banned
-    if (user.banned_until) {
-      const banEnd = new Date(user.banned_until);
+    // Check if banned via JSON config
+    const bannedUsers = getBannedUsers();
+    const banInfo = bannedUsers[user.id];
+    
+    if (banInfo) {
+      const banEnd = new Date(banInfo.bannedUntil);
       if (banEnd > new Date()) {
         return res.json({ 
           success: false, 
-          error: `Account banned until ${banEnd.toLocaleString()}. Reason: ${user.ban_reason || 'No reason provided'}` 
+          error: `Account banned until ${banEnd.toLocaleString()}. Reason: ${banInfo.reason || 'No reason provided'}` 
         });
       } else {
-        // Ban expired, clear it
-        await db.run("UPDATE users SET banned_until = NULL, ban_reason = NULL WHERE id = ?", [user.id]);
+        // Ban expired, remove from JSON
+        delete bannedUsers[user.id];
+        saveBannedUsers(bannedUsers);
       }
     }
   }
@@ -56,7 +73,6 @@ router.post("/login", async (req, res) => {
 });
 
 router.post("/admin/ban", async (req, res) => {
-  const db = await setupDatabase();
   const { userId, durationMinutes, reason } = req.body;
   
   if (!userId || !durationMinutes) {
@@ -65,26 +81,45 @@ router.post("/admin/ban", async (req, res) => {
 
   const banEnd = new Date(Date.now() + durationMinutes * 60000).toISOString();
   
-  await db.run("UPDATE users SET banned_until = ?, ban_reason = ? WHERE id = ?", [banEnd, reason, userId]);
+  const bannedUsers = getBannedUsers();
+  bannedUsers[userId] = {
+    bannedUntil: banEnd,
+    reason: reason
+  };
+  saveBannedUsers(bannedUsers);
   
   res.json({ success: true, bannedUntil: banEnd });
 });
 
 router.post("/admin/unban", async (req, res) => {
-  const db = await setupDatabase();
   const { userId } = req.body;
   
   if (!userId) return res.status(400).json({ error: "Missing userId" });
   
-  await db.run("UPDATE users SET banned_until = NULL, ban_reason = NULL WHERE id = ?", [userId]);
+  const bannedUsers = getBannedUsers();
+  if (bannedUsers[userId]) {
+    delete bannedUsers[userId];
+    saveBannedUsers(bannedUsers);
+  }
   
   res.json({ success: true });
 });
 
 router.get("/admin/users", async (req, res) => {
   const db = await setupDatabase();
-  const users = await db.all("SELECT id, username, banned_until, ban_reason FROM users");
-  res.json(users);
+  const users = await db.all("SELECT id, username FROM users");
+  const bannedUsers = getBannedUsers();
+  
+  const usersWithStatus = users.map(u => {
+    const banInfo = bannedUsers[u.id];
+    return {
+      ...u,
+      banned_until: banInfo ? banInfo.bannedUntil : null,
+      ban_reason: banInfo ? banInfo.reason : null
+    };
+  });
+  
+  res.json(usersWithStatus);
 });
 
 router.get("/user/:id", async (req, res) => {
