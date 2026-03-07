@@ -92,7 +92,9 @@ export function MenuOverlay({ onClose, onNavigate }: { onClose: () => void, onNa
             <MenuSquareBtn icon={<Heart size={24} className="text-orange-500" />} label="Favorites" borderColor="border-orange-500" />
             <MenuSquareBtn icon={<BookOpen size={24} className="text-orange-500" />} label="Archive" borderColor="border-orange-500" />
             <MenuSquareBtn icon={<Gamepad2 size={24} className="text-orange-500" />} label="Game Center" borderColor="border-orange-500" />
-            <MenuSquareBtn icon={<Headphones size={24} className="text-orange-500" />} label="Sound Booth" borderColor="border-orange-500" />
+            <div onClick={() => { onClose(); onNavigate('soundbooth'); }}>
+              <MenuSquareBtn icon={<Headphones size={24} className="text-orange-500" />} label="Sound Booth" borderColor="border-orange-500" />
+            </div>
             <div onClick={() => { onClose(); onNavigate('admin'); }}>
               <MenuSquareBtn icon={<Shield size={24} className="text-red-500" />} label="Admin" borderColor="border-red-500" />
             </div>
