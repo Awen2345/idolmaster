@@ -119,6 +119,17 @@ export function FormationPage({ onNavigate, initialFormation, onSave, inventory 
                       </div>
                     </div>
                     
+                    {card.passiveSkill && (
+                      <div className="mt-1 text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200 truncate" title={card.passiveSkill.description}>
+                        <span className="font-bold">{
+                          card.passiveSkill.type === 'exp_boost' ? 'EXP Boost' :
+                          card.passiveSkill.type === 'money_boost' ? 'Money Boost' :
+                          card.passiveSkill.type === 'fan_boost' ? 'Fan Boost' :
+                          card.passiveSkill.type === 'stamina_reduction' ? 'Stamina Red.' : 'Skill'
+                        }:</span> {card.passiveSkill.value}%
+                      </div>
+                    )}
+                    
                     <div className="mt-1 flex justify-end gap-1">
                       <button onClick={() => handleRemove(index)} className="bg-gradient-to-b from-gray-100 to-gray-300 border border-gray-400 rounded px-3 py-1 text-[10px] font-bold text-gray-700 shadow-sm hover:brightness-95">
                         Remove
@@ -209,6 +220,16 @@ export function FormationPage({ onNavigate, initialFormation, onSave, inventory 
                             <span className="text-[10px] text-red-500 font-bold">Atk: {card.atk}</span>
                             <span className="text-[10px] text-blue-500 font-bold">Def: {card.def}</span>
                           </div>
+                          {card.passiveSkill && (
+                            <div className="mt-1 text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200 truncate" title={card.passiveSkill.description}>
+                              <span className="font-bold">{
+                                card.passiveSkill.type === 'exp_boost' ? 'EXP Boost' :
+                                card.passiveSkill.type === 'money_boost' ? 'Money Boost' :
+                                card.passiveSkill.type === 'fan_boost' ? 'Fan Boost' :
+                                card.passiveSkill.type === 'stamina_reduction' ? 'Stamina Red.' : 'Skill'
+                              }:</span> {card.passiveSkill.value}%
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

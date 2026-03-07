@@ -427,6 +427,16 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
                                 <span className="text-[8px] text-blue-500 font-bold">Def</span>
                                 <span className="text-[9px] font-mono">{card.def}</span>
                               </div>
+                              {card.passiveSkill && (
+                                <div className="mt-0.5 text-[7px] bg-indigo-50 text-indigo-700 px-1 py-0.5 rounded border border-indigo-200 truncate" title={card.passiveSkill.description}>
+                                  <span className="font-bold">{
+                                    card.passiveSkill.type === 'exp_boost' ? 'EXP Boost' :
+                                    card.passiveSkill.type === 'money_boost' ? 'Money Boost' :
+                                    card.passiveSkill.type === 'fan_boost' ? 'Fan Boost' :
+                                    card.passiveSkill.type === 'stamina_reduction' ? 'Stamina Red.' : 'Skill'
+                                  }:</span> {card.passiveSkill.value}%
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}

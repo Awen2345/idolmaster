@@ -117,8 +117,20 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
                     <div className="transform -rotate-90 origin-bottom-left absolute bottom-8 left-6 text-white font-black tracking-widest text-lg drop-shadow-[0_2px_2px_rgba(0,0,0,1)] whitespace-nowrap">
                       {card.name}
                     </div>
-                    <div className="text-yellow-400 font-black italic text-xl drop-shadow-[0_2px_2px_rgba(0,0,0,1)] self-end w-full text-right pr-2">
-                      {card.rarity}
+                    <div className="flex flex-col items-end w-full pr-2">
+                      <div className="text-yellow-400 font-black italic text-xl drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">
+                        {card.rarity}
+                      </div>
+                      {card.passiveSkill && (
+                        <div className="mt-1 text-[10px] bg-indigo-900/80 text-indigo-200 px-2 py-1 rounded border border-indigo-500/50 shadow-md max-w-[150px] text-right" title={card.passiveSkill.description}>
+                          <span className="font-bold">{
+                            card.passiveSkill.type === 'exp_boost' ? 'EXP Boost' :
+                            card.passiveSkill.type === 'money_boost' ? 'Money Boost' :
+                            card.passiveSkill.type === 'fan_boost' ? 'Fan Boost' :
+                            card.passiveSkill.type === 'stamina_reduction' ? 'Stamina Red.' : 'Skill'
+                          }:</span> {card.passiveSkill.value}%
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>

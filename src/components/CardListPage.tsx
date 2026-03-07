@@ -143,6 +143,16 @@ export function CardListPage({ onNavigate }: CardListPageProps) {
                           <span>ATK {card.atk}</span>
                           <span>DEF {card.def}</span>
                         </div>
+                        {card.passiveSkill && (
+                          <div className="mt-2 text-[10px] bg-indigo-900/50 text-indigo-300 p-1 rounded border border-indigo-700/50 line-clamp-2" title={card.passiveSkill.description}>
+                            <span className="font-bold">{
+                              card.passiveSkill.type === 'exp_boost' ? 'EXP Boost' :
+                              card.passiveSkill.type === 'money_boost' ? 'Money Boost' :
+                              card.passiveSkill.type === 'fan_boost' ? 'Fan Boost' :
+                              card.passiveSkill.type === 'stamina_reduction' ? 'Stamina Red.' : 'Skill'
+                            }:</span> {card.passiveSkill.value}%
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   ))}

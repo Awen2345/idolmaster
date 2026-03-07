@@ -131,7 +131,7 @@ function AppContent() {
         case 'soundbooth':
           return <SoundBoothPage onNavigate={handleNavigate} />;
         case 'work':
-          return <WorkPage onNavigate={handleNavigate} />;
+          return <WorkPage onNavigate={handleNavigate} formation={formation} />;
         case 'formation':
           return (
             <FormationPage 

@@ -3,6 +3,8 @@ import { ChevronLeft, Briefcase, Star, User } from 'lucide-react';
 import { WorkProgressBar } from '../components/WorkProgressBar';
 import { RewardPopup } from '../components/RewardPopup';
 
+import { Card } from '../types';
+
 // WORK SYSTEM
 interface PlayerData {
   stamina: number;
@@ -14,19 +16,35 @@ interface PlayerData {
   level: number;
 }
 
-export function WorkPage({ onNavigate }: { onNavigate: (page: string) => void }) {
+export function WorkPage({ onNavigate, formation }: { onNavigate: (page: string) => void, formation: (Card | null)[] }) {
   const [player, setPlayer] = useState<PlayerData | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showReward, setShowReward] = useState(false);
   const [rewards, setRewards] = useState({ exp: 0, money: 0, fans: 0 });
 
-  // Mock selected idols for the UI
-  const selectedIdols = [
-    { id: 1, name: 'Idol 1', image: 'https://picsum.photos/seed/idol1/100/100' },
-    { id: 2, name: 'Idol 2', image: 'https://picsum.photos/seed/idol2/100/100' },
-    null
-  ];
+  // Use up to 3 idols from the formation for work
+  const selectedIdols = formation.slice(0, 3);
+
+  // Calculate passive skill bonuses
+  let expBoost = 0;
+  let moneyBoost = 0;
+  let fanBoost = 0;
+  let staminaReduction = 0;
+
+  selectedIdols.forEach(idol => {
+    if (idol?.passiveSkill) {
+      switch (idol.passiveSkill.type) {
+        case 'exp_boost': expBoost += idol.passiveSkill.value; break;
+        case 'money_boost': moneyBoost += idol.passiveSkill.value; break;
+        case 'fan_boost': fanBoost += idol.passiveSkill.value; break;
+        case 'stamina_reduction': staminaReduction += idol.passiveSkill.value; break;
+      }
+    }
+  });
+
+  const baseStaminaCost = 20;
+  const staminaCost = Math.max(1, Math.floor(baseStaminaCost * (1 - staminaReduction / 100)));
 
   useEffect(() => {
     // Load player data
@@ -63,10 +81,10 @@ export function WorkPage({ onNavigate }: { onNavigate: (page: string) => void })
 
   // IDOL JOB
   const handleStartWork = () => {
-    if (!player || player.stamina < 20 || isWorking) return;
+    if (!player || player.stamina < staminaCost || isWorking) return;
 
     // Consume stamina
-    const newPlayer = { ...player, stamina: player.stamina - 20 };
+    const newPlayer = { ...player, stamina: player.stamina - staminaCost };
     savePlayer(newPlayer);
     
     setIsWorking(true);
@@ -93,11 +111,15 @@ export function WorkPage({ onNavigate }: { onNavigate: (page: string) => void })
   const finishWork = (currentPlayer: PlayerData) => {
     setIsWorking(false);
     
-    // Generate rewards
+    // Generate rewards with passive skill boosts
+    const baseExp = 50;
+    const baseMoney = 100;
+    const baseFans = 25;
+
     const generatedRewards = {
-      exp: 50,
-      money: 100,
-      fans: 25
+      exp: Math.floor(baseExp * (1 + expBoost / 100)),
+      money: Math.floor(baseMoney * (1 + moneyBoost / 100)),
+      fans: Math.floor(baseFans * (1 + fanBoost / 100))
     };
     
     setRewards(generatedRewards);
@@ -212,7 +234,7 @@ export function WorkPage({ onNavigate }: { onNavigate: (page: string) => void })
                 <div key={idx} className="relative w-20 h-20 rounded-lg border-2 border-slate-600 bg-slate-900 flex items-center justify-center overflow-hidden shadow-md">
                   {idol ? (
                     <>
-                      <img src={idol.image} alt={idol.name} className="w-full h-full object-cover opacity-80" referrerPolicy="no-referrer" />
+                      <img src={idol.img} alt={idol.name} className="w-full h-full object-cover opacity-80" referrerPolicy="no-referrer" />
                       <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[10px] text-center font-bold py-0.5 truncate px-1">
                         {idol.name}
                       </div>
@@ -227,6 +249,19 @@ export function WorkPage({ onNavigate }: { onNavigate: (page: string) => void })
               ))}
             </div>
           )}
+          
+          {/* Passive Skills Summary */}
+          {(expBoost > 0 || moneyBoost > 0 || fanBoost > 0 || staminaReduction > 0) && (
+            <div className="mt-4 pt-4 border-t border-slate-700">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">Active Passive Skills</div>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {expBoost > 0 && <span className="text-[10px] bg-blue-900/50 text-blue-300 px-2 py-1 rounded border border-blue-700/50">EXP +{expBoost}%</span>}
+                {moneyBoost > 0 && <span className="text-[10px] bg-yellow-900/50 text-yellow-300 px-2 py-1 rounded border border-yellow-700/50">Money +{moneyBoost}%</span>}
+                {fanBoost > 0 && <span className="text-[10px] bg-pink-900/50 text-pink-300 px-2 py-1 rounded border border-pink-700/50">Fans +{fanBoost}%</span>}
+                {staminaReduction > 0 && <span className="text-[10px] bg-green-900/50 text-green-300 px-2 py-1 rounded border border-green-700/50">Stamina Cost -{staminaReduction}%</span>}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -234,14 +269,14 @@ export function WorkPage({ onNavigate }: { onNavigate: (page: string) => void })
       <div className="p-4 bg-slate-800 border-t border-slate-700">
         <button
           onClick={handleStartWork}
-          disabled={isWorking || stamina < 20 || !hasIdols}
+          disabled={isWorking || stamina < staminaCost || !hasIdols}
           className={`w-full py-4 rounded-full font-black text-xl italic tracking-wider shadow-lg transition-all ${
-            isWorking || stamina < 20 || !hasIdols
+            isWorking || stamina < staminaCost || !hasIdols
               ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
               : 'bg-gradient-to-r from-pink-500 to-rose-600 text-white hover:brightness-110 active:scale-95'
           }`}
         >
-          {isWorking ? 'WORKING...' : stamina < 20 ? 'NO STAMINA' : 'START WORK (20 STAMINA)'}
+          {isWorking ? 'WORKING...' : stamina < staminaCost ? 'NO STAMINA' : `START WORK (${staminaCost} STAMINA)`}
         </button>
       </div>
 

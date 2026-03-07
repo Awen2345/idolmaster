@@ -1,5 +1,13 @@
 export type Rarity = 'N' | 'R' | 'SR' | 'SSR';
 
+export type PassiveSkillType = 'exp_boost' | 'money_boost' | 'fan_boost' | 'stamina_reduction';
+
+export type PassiveSkill = {
+  type: PassiveSkillType;
+  value: number;
+  description: string;
+};
+
 export type Card = {
   id: number;
   name: string;
@@ -9,6 +17,7 @@ export type Card = {
   cost: number;
   rarity: Rarity;
   attribute?: string;
+  passiveSkill?: PassiveSkill;
 };
 
 export type UserState = {
