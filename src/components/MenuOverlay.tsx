@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import { 
   Home, Bird, Mic2, Music, RefreshCcw, X, 
@@ -49,7 +48,7 @@ export function MenuOverlay({ onClose, onNavigate, userId }: { onClose: () => vo
       className="absolute inset-0 z-50 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] bg-slate-900 flex flex-col overflow-y-auto"
     >
       {/* Promo Code Modal */}
-      {showPromo && createPortal(
+      {showPromo && (
         <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
@@ -83,8 +82,7 @@ export function MenuOverlay({ onClose, onNavigate, userId }: { onClose: () => vo
               {promoLoading ? 'Verifying...' : 'Redeem'}
             </button>
           </motion.div>
-        </div>,
-        document.body
+        </div>
       )}
 
       {/* Top Nav (Replicated but with Close button) */}
