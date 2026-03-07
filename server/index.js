@@ -11,6 +11,23 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
+  // Real-time request and response logging middleware
+  app.use((req, res, next) => {
+    const start = Date.now();
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Body:`, req.body);
+    
+    // Intercept response to log it
+    const originalSend = res.send;
+    res.send = function (body) {
+      const duration = Date.now() - start;
+      console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Status: ${res.statusCode} - Duration: ${duration}ms`);
+      // Optional: log response body for specific routes if needed, but usually too large
+      return originalSend.apply(res, arguments);
+    };
+    
+    next();
+  });
+
   // Initialize database
   await setupDatabase();
 

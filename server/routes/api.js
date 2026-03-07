@@ -143,9 +143,15 @@ router.get("/user/:id", async (req, res) => {
     WHERE uf.user_id = ?
   `, [userId]);
 
+  const parseSkills = (row) => {
+    try { if (row.passiveSkill) row.passiveSkill = JSON.parse(row.passiveSkill); } catch (e) {}
+    try { if (row.liveSkill) row.liveSkill = JSON.parse(row.liveSkill); } catch (e) {}
+    return row;
+  };
+
   const formation = [null, null, null, null, null];
   for (const row of formationRows) {
-    formation[row.slot_index] = { ...row, id: row.inventory_id, card_id: row.id };
+    formation[row.slot_index] = parseSkills({ ...row, id: row.inventory_id, card_id: row.id });
   }
 
   res.json({
@@ -154,7 +160,10 @@ router.get("/user/:id", async (req, res) => {
     stamina: user.stamina,
     maxStamina: user.maxStamina,
     staminaDrinks: user.staminaDrinks,
-    inventory: inventoryRows.map(r => ({ ...r, id: r.inventory_id, card_id: r.id })),
+    exp: user.exp,
+    level: user.level,
+    fans: user.fans,
+    inventory: inventoryRows.map(r => parseSkills({ ...r, id: r.inventory_id, card_id: r.id })),
     formation
   });
 });
@@ -190,7 +199,14 @@ router.get("/cards/available", async (req, res) => {
   // Return all cards for the details page
   // In a real app, this might be filtered by the active banner's pool
   const cards = await db.all("SELECT * FROM cards ORDER BY rarity DESC, id DESC");
-  res.json(cards);
+  
+  const parseSkills = (row) => {
+    try { if (row.passiveSkill) row.passiveSkill = JSON.parse(row.passiveSkill); } catch (e) {}
+    try { if (row.liveSkill) row.liveSkill = JSON.parse(row.liveSkill); } catch (e) {}
+    return row;
+  };
+
+  res.json(cards.map(parseSkills));
 });
 
 router.post("/gacha/:id", async (req, res) => {
@@ -322,7 +338,14 @@ router.get("/cards", async (req, res) => {
   }
   
   const cards = await db.all(query, params);
-  res.json(cards);
+  
+  const parseSkills = (row) => {
+    try { if (row.passiveSkill) row.passiveSkill = JSON.parse(row.passiveSkill); } catch (e) {}
+    try { if (row.liveSkill) row.liveSkill = JSON.parse(row.liveSkill); } catch (e) {}
+    return row;
+  };
+
+  res.json(cards.map(parseSkills));
 });
 
 router.post("/admin/fetch-cards", async (req, res) => {
@@ -445,6 +468,78 @@ router.post("/promocode/redeem", async (req, res) => {
     console.error("Promo code error:", error);
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
+});
+
+// NEW FEATURE: WORK SYSTEM
+router.post("/work/:id", async (req, res) => {
+  const db = await setupDatabase();
+  const userId = req.params.id;
+  const { staminaCost, expReward, moneyReward, fansReward } = req.body;
+
+  const user = await db.get("SELECT * FROM users WHERE id = ?", [userId]);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  if (user.stamina < staminaCost) {
+    return res.status(400).json({ error: "Not enough stamina" });
+  }
+
+  let newStamina = user.stamina - staminaCost;
+  let newExp = user.exp + expReward;
+  let newCoins = user.coins + moneyReward;
+  let newFans = user.fans + fansReward;
+  let newLevel = user.level;
+  let newMaxStamina = user.maxStamina;
+
+  // Simple level up logic
+  let nextLevelExp = user.level * 1000; // Simplified
+  while (newExp >= nextLevelExp) {
+    newLevel++;
+    newExp -= nextLevelExp;
+    nextLevelExp = newLevel * 1000;
+    newMaxStamina += 5;
+    newStamina = newMaxStamina; // Refill on level up
+  }
+
+  await db.run(`
+    UPDATE users 
+    SET stamina = ?, exp = ?, coins = ?, fans = ?, level = ?, maxStamina = ?
+    WHERE id = ?
+  `, [newStamina, newExp, newCoins, newFans, newLevel, newMaxStamina, userId]);
+
+  res.json({
+    success: true,
+    stamina: newStamina,
+    exp: newExp,
+    coins: newCoins,
+    fans: newFans,
+    level: newLevel,
+    maxStamina: newMaxStamina
+  });
+});
+
+// NEW FEATURE: LIVE BATTLE SYSTEM
+router.post("/live/:id", async (req, res) => {
+  const db = await setupDatabase();
+  const userId = req.params.id;
+  const { isWin, fansGained, moneyGained } = req.body;
+
+  const user = await db.get("SELECT * FROM users WHERE id = ?", [userId]);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  let newCoins = user.coins + moneyGained;
+  let newFans = user.fans + fansGained;
+
+  await db.run(`
+    UPDATE users 
+    SET coins = ?, fans = ?
+    WHERE id = ?
+  `, [newCoins, newFans, userId]);
+
+  res.json({
+    success: true,
+    coins: newCoins,
+    fans: newFans
+  });
 });
 
 export default router;

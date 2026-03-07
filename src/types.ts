@@ -8,6 +8,14 @@ export type PassiveSkill = {
   description: string;
 };
 
+export type LiveSkillType = 'atk_boost' | 'def_boost' | 'atk_def_boost';
+
+export type LiveSkill = {
+  type: LiveSkillType;
+  value: number;
+  description: string;
+};
+
 export type Card = {
   id: number;
   name: string;
@@ -18,6 +26,7 @@ export type Card = {
   rarity: Rarity;
   attribute?: string;
   passiveSkill?: PassiveSkill;
+  liveSkill?: LiveSkill;
 };
 
 export type UserState = {

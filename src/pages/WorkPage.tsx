@@ -16,7 +16,7 @@ interface PlayerData {
   level: number;
 }
 
-export function WorkPage({ onNavigate, formation }: { onNavigate: (page: string) => void, formation: (Card | null)[] }) {
+export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page: string) => void, formation: (Card | null)[], userId: number }) {
   const [player, setPlayer] = useState<PlayerData | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -47,46 +47,27 @@ export function WorkPage({ onNavigate, formation }: { onNavigate: (page: string)
   const staminaCost = Math.max(1, Math.floor(baseStaminaCost * (1 - staminaReduction / 100)));
 
   useEffect(() => {
-    // Load player data
-    const saved = localStorage.getItem('player_data');
-    if (saved) {
-      try {
-        setPlayer(JSON.parse(saved));
-      } catch (e) {
-        initDefaultPlayer();
-      }
-    } else {
-      initDefaultPlayer();
-    }
-  }, []);
-
-  const initDefaultPlayer = () => {
-    const defaultData = {
-      stamina: 221,
-      maxStamina: 221,
-      exp: 1827,
-      nextLevelExp: 3700,
-      money: 12000,
-      fans: 4500,
-      level: 15
-    };
-    setPlayer(defaultData);
-    localStorage.setItem('player_data', JSON.stringify(defaultData));
-  };
-
-  const savePlayer = (data: PlayerData) => {
-    setPlayer(data);
-    localStorage.setItem('player_data', JSON.stringify(data));
-  };
+    // Load player data from server
+    fetch(`/api/user/${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        setPlayer({
+          stamina: data.stamina,
+          maxStamina: data.maxStamina,
+          exp: data.exp,
+          nextLevelExp: data.level * 1000, // Simplified for now
+          money: data.coins,
+          fans: data.fans,
+          level: data.level
+        });
+      })
+      .catch(err => console.error("Failed to load user data", err));
+  }, [userId]);
 
   // IDOL JOB
-  const handleStartWork = () => {
+  const handleStartWork = async () => {
     if (!player || player.stamina < staminaCost || isWorking) return;
 
-    // Consume stamina
-    const newPlayer = { ...player, stamina: player.stamina - staminaCost };
-    savePlayer(newPlayer);
-    
     setIsWorking(true);
     setProgress(0);
 
@@ -102,13 +83,13 @@ export function WorkPage({ onNavigate, formation }: { onNavigate: (page: string)
 
       if (currentStep >= steps) {
         clearInterval(timer);
-        finishWork(newPlayer);
+        finishWork();
       }
     }, interval);
   };
 
   // REWARD SYSTEM
-  const finishWork = (currentPlayer: PlayerData) => {
+  const finishWork = async () => {
     setIsWorking(false);
     
     // Generate rewards with passive skill boosts
@@ -125,32 +106,33 @@ export function WorkPage({ onNavigate, formation }: { onNavigate: (page: string)
     setRewards(generatedRewards);
     setShowReward(true);
 
-    // Apply rewards
-    let newExp = currentPlayer.exp + generatedRewards.exp;
-    let newLevel = currentPlayer.level;
-    let nextExp = currentPlayer.nextLevelExp;
-    let newStamina = currentPlayer.stamina;
-    let newMaxStamina = currentPlayer.maxStamina;
+    try {
+      const res = await fetch(`/api/work/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          staminaCost,
+          expReward: generatedRewards.exp,
+          moneyReward: generatedRewards.money,
+          fansReward: generatedRewards.fans
+        })
+      });
 
-    // Level up logic
-    if (newExp >= nextExp) {
-      newLevel++;
-      newExp -= nextExp;
-      nextExp = Math.floor(nextExp * 1.2);
-      newMaxStamina += 5;
-      newStamina = newMaxStamina; // Refill stamina on level up
+      if (res.ok) {
+        const data = await res.json();
+        setPlayer({
+          stamina: data.stamina,
+          maxStamina: data.maxStamina,
+          exp: data.exp,
+          nextLevelExp: data.level * 1000,
+          money: data.coins,
+          fans: data.fans,
+          level: data.level
+        });
+      }
+    } catch (err) {
+      console.error("Failed to save work results", err);
     }
-
-    savePlayer({
-      ...currentPlayer,
-      exp: newExp,
-      level: newLevel,
-      nextLevelExp: nextExp,
-      stamina: newStamina,
-      maxStamina: newMaxStamina,
-      money: currentPlayer.money + generatedRewards.money,
-      fans: currentPlayer.fans + generatedRewards.fans
-    });
   };
 
   const stamina = player?.stamina ?? 0;

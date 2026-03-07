@@ -23,6 +23,9 @@ export async function setupDatabase() {
       stamina INTEGER DEFAULT 50,
       maxStamina INTEGER DEFAULT 50,
       staminaDrinks INTEGER DEFAULT 10,
+      exp INTEGER DEFAULT 0,
+      level INTEGER DEFAULT 1,
+      fans INTEGER DEFAULT 0,
       banned_until TEXT,
       ban_reason TEXT
     );
@@ -35,7 +38,9 @@ export async function setupDatabase() {
       def INTEGER,
       cost INTEGER,
       rarity TEXT,
-      attribute TEXT
+      attribute TEXT,
+      passiveSkill TEXT,
+      liveSkill TEXT
     );
 
     CREATE TABLE IF NOT EXISTS user_inventory (
@@ -81,6 +86,20 @@ export async function setupDatabase() {
     // Column likely already exists
   }
 
+  try {
+    await db.exec("ALTER TABLE cards ADD COLUMN passiveSkill TEXT");
+  } catch (e) {}
+
+  try {
+    await db.exec("ALTER TABLE cards ADD COLUMN liveSkill TEXT");
+  } catch (e) {}
+
+  try {
+    await db.exec("ALTER TABLE users ADD COLUMN exp INTEGER DEFAULT 0");
+    await db.exec("ALTER TABLE users ADD COLUMN level INTEGER DEFAULT 1");
+    await db.exec("ALTER TABLE users ADD COLUMN fans INTEGER DEFAULT 0");
+  } catch (e) {}
+
   // Add ban columns if they don't exist
   try {
     await db.exec("ALTER TABLE users ADD COLUMN banned_until TEXT");
@@ -93,21 +112,21 @@ export async function setupDatabase() {
   const cardCount = await db.get("SELECT COUNT(*) as count FROM cards");
   if (cardCount.count === 0) {
     const ALL_CARDS = [
-      { id: 1, name: "SHIBUYA RIN", img: "https://picsum.photos/seed/rin_ssr/400/600", atk: 18000, def: 15000, cost: 24, rarity: 'SSR', attribute: 'Cool' },
-      { id: 2, name: "SHIMAMURA UZUKI", img: "https://picsum.photos/seed/uzuki_ssr/400/600", atk: 17500, def: 16000, cost: 24, rarity: 'SSR', attribute: 'Cute' },
-      { id: 3, name: "HONDA MIO", img: "https://picsum.photos/seed/mio_ssr/400/600", atk: 19000, def: 14000, cost: 24, rarity: 'SSR', attribute: 'Passion' },
-      { id: 10, name: "RIN SHIBUYA", img: "https://picsum.photos/seed/rin1/400/600", atk: 13000, def: 10500, cost: 18, rarity: 'SR', attribute: 'Cool' },
-      { id: 11, name: "UZUKI SHIMAMURA", img: "https://picsum.photos/seed/uzuki1/400/600", atk: 12000, def: 11500, cost: 17, rarity: 'SR', attribute: 'Cute' },
-      { id: 12, name: "MIO HONDA", img: "https://picsum.photos/seed/mio1/400/600", atk: 14000, def: 9500, cost: 19, rarity: 'SR', attribute: 'Passion' },
-      { id: 13, name: "KAEDE TAKAGAKI", img: "https://picsum.photos/seed/kaede1/400/600", atk: 15000, def: 12000, cost: 21, rarity: 'SR', attribute: 'Cool' },
-      { id: 14, name: "MIKA JOUGASAKI", img: "https://picsum.photos/seed/mika1/400/600", atk: 13500, def: 10000, cost: 18, rarity: 'SR', attribute: 'Passion' },
-      { id: 15, name: "RIKA JOUGASAKI", img: "https://picsum.photos/seed/rika1/400/600", atk: 11000, def: 9000, cost: 15, rarity: 'SR', attribute: 'Passion' },
-      { id: 20, name: "NORMAL IDOL A", img: "https://picsum.photos/seed/normal1/400/600", atk: 5000, def: 4000, cost: 10, rarity: 'R', attribute: 'Cute' },
-      { id: 21, name: "NORMAL IDOL B", img: "https://picsum.photos/seed/normal2/400/600", atk: 4500, def: 4500, cost: 10, rarity: 'R', attribute: 'Cool' },
-      { id: 22, name: "NORMAL IDOL C", img: "https://picsum.photos/seed/normal3/400/600", atk: 5500, def: 3500, cost: 10, rarity: 'R', attribute: 'Passion' },
+      { id: 1, name: "SHIBUYA RIN", img: "https://picsum.photos/seed/rin_ssr/400/600", atk: 18000, def: 15000, cost: 24, rarity: 'SSR', attribute: 'Cool', passiveSkill: JSON.stringify({ type: 'exp_boost', value: 20, description: 'Increases EXP gained from work by 20%' }), liveSkill: JSON.stringify({ type: 'atk_boost', value: 30, description: 'Boosts Cool ATK by 30%' }) },
+      { id: 2, name: "SHIMAMURA UZUKI", img: "https://picsum.photos/seed/uzuki_ssr/400/600", atk: 17500, def: 16000, cost: 24, rarity: 'SSR', attribute: 'Cute', passiveSkill: JSON.stringify({ type: 'fan_boost', value: 25, description: 'Increases Fans gained from work by 25%' }), liveSkill: JSON.stringify({ type: 'atk_def_boost', value: 20, description: 'Boosts Cute ATK/DEF by 20%' }) },
+      { id: 3, name: "HONDA MIO", img: "https://picsum.photos/seed/mio_ssr/400/600", atk: 19000, def: 14000, cost: 24, rarity: 'SSR', attribute: 'Passion', passiveSkill: JSON.stringify({ type: 'money_boost', value: 30, description: 'Increases Money gained from work by 30%' }), liveSkill: JSON.stringify({ type: 'def_boost', value: 30, description: 'Boosts Passion DEF by 30%' }) },
+      { id: 10, name: "RIN SHIBUYA", img: "https://picsum.photos/seed/rin1/400/600", atk: 13000, def: 10500, cost: 18, rarity: 'SR', attribute: 'Cool', passiveSkill: JSON.stringify({ type: 'stamina_reduction', value: 10, description: 'Reduces stamina cost of work by 10%' }), liveSkill: JSON.stringify({ type: 'atk_boost', value: 15, description: 'Boosts Cool ATK by 15%' }) },
+      { id: 11, name: "UZUKI SHIMAMURA", img: "https://picsum.photos/seed/uzuki1/400/600", atk: 12000, def: 11500, cost: 17, rarity: 'SR', attribute: 'Cute', passiveSkill: JSON.stringify({ type: 'fan_boost', value: 15, description: 'Increases Fans gained from work by 15%' }), liveSkill: JSON.stringify({ type: 'atk_def_boost', value: 10, description: 'Boosts Cute ATK/DEF by 10%' }) },
+      { id: 12, name: "MIO HONDA", img: "https://picsum.photos/seed/mio1/400/600", atk: 14000, def: 9500, cost: 19, rarity: 'SR', attribute: 'Passion', passiveSkill: JSON.stringify({ type: 'money_boost', value: 15, description: 'Increases Money gained from work by 15%' }), liveSkill: JSON.stringify({ type: 'def_boost', value: 15, description: 'Boosts Passion DEF by 15%' }) },
+      { id: 13, name: "KAEDE TAKAGAKI", img: "https://picsum.photos/seed/kaede1/400/600", atk: 15000, def: 12000, cost: 21, rarity: 'SR', attribute: 'Cool', passiveSkill: JSON.stringify({ type: 'exp_boost', value: 15, description: 'Increases EXP gained from work by 15%' }), liveSkill: JSON.stringify({ type: 'atk_boost', value: 15, description: 'Boosts Cool ATK by 15%' }) },
+      { id: 14, name: "MIKA JOUGASAKI", img: "https://picsum.photos/seed/mika1/400/600", atk: 13500, def: 10000, cost: 18, rarity: 'SR', attribute: 'Passion', passiveSkill: JSON.stringify({ type: 'stamina_reduction', value: 15, description: 'Reduces stamina cost of work by 15%' }), liveSkill: JSON.stringify({ type: 'def_boost', value: 15, description: 'Boosts Passion DEF by 15%' }) },
+      { id: 15, name: "RIKA JOUGASAKI", img: "https://picsum.photos/seed/rika1/400/600", atk: 11000, def: 9000, cost: 15, rarity: 'SR', attribute: 'Passion', passiveSkill: JSON.stringify({ type: 'money_boost', value: 10, description: 'Increases Money gained from work by 10%' }), liveSkill: JSON.stringify({ type: 'atk_boost', value: 10, description: 'Boosts Passion ATK by 10%' }) },
+      { id: 20, name: "NORMAL IDOL A", img: "https://picsum.photos/seed/normal1/400/600", atk: 5000, def: 4000, cost: 10, rarity: 'R', attribute: 'Cute', passiveSkill: null, liveSkill: null },
+      { id: 21, name: "NORMAL IDOL B", img: "https://picsum.photos/seed/normal2/400/600", atk: 4500, def: 4500, cost: 10, rarity: 'R', attribute: 'Cool', passiveSkill: null, liveSkill: null },
+      { id: 22, name: "NORMAL IDOL C", img: "https://picsum.photos/seed/normal3/400/600", atk: 5500, def: 3500, cost: 10, rarity: 'R', attribute: 'Passion', passiveSkill: null, liveSkill: null },
     ];
     for (const card of ALL_CARDS) {
-      await db.run("INSERT INTO cards (id, name, img, atk, def, cost, rarity, attribute) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [card.id, card.name, card.img, card.atk, card.def, card.cost, card.rarity, card.attribute]);
+      await db.run("INSERT INTO cards (id, name, img, atk, def, cost, rarity, attribute, passiveSkill, liveSkill) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [card.id, card.name, card.img, card.atk, card.def, card.cost, card.rarity, card.attribute, card.passiveSkill, card.liveSkill]);
     }
   }
 

@@ -57,7 +57,9 @@ export function MenuOverlay({ onClose, onNavigate }: { onClose: () => void, onNa
           <div onClick={() => { onClose(); onNavigate('work'); }}>
             <MenuCircleBtn icon={<Star size={28} className="text-pink-500" />} label="Work" borderColor="border-pink-500" />
           </div>
-          <MenuCircleBtn icon={<Swords size={28} className="text-blue-500" />} label="LIVE Battle" borderColor="border-blue-500" />
+          <div onClick={() => { onClose(); onNavigate('live'); }}>
+            <MenuCircleBtn icon={<Swords size={28} className="text-blue-500" />} label="LIVE Battle" borderColor="border-blue-500" />
+          </div>
           <div onClick={() => { onClose(); onNavigate('formation'); }}>
             <MenuCircleBtn icon={<Users size={28} className="text-green-500" />} label="Formation" borderColor="border-green-500" />
           </div>
