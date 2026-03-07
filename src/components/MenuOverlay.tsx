@@ -54,7 +54,9 @@ export function MenuOverlay({ onClose, onNavigate }: { onClose: () => void, onNa
         {/* Main Actions (Circles) */}
         <div className="flex justify-around px-2">
           <MenuCircleBtn icon={<Music size={28} className="text-purple-600" />} label="Lesson & Training" borderColor="border-purple-600" />
-          <MenuCircleBtn icon={<Star size={28} className="text-pink-500" />} label="Work" borderColor="border-pink-500" />
+          <div onClick={() => { onClose(); onNavigate('work'); }}>
+            <MenuCircleBtn icon={<Star size={28} className="text-pink-500" />} label="Work" borderColor="border-pink-500" />
+          </div>
           <MenuCircleBtn icon={<Swords size={28} className="text-blue-500" />} label="LIVE Battle" borderColor="border-blue-500" />
           <div onClick={() => { onClose(); onNavigate('formation'); }}>
             <MenuCircleBtn icon={<Users size={28} className="text-green-500" />} label="Formation" borderColor="border-green-500" />

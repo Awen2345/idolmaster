@@ -137,7 +137,9 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
             <StatusBox icon={<Gift size={24} />} value="421" color="bg-pink-600" rounded />
           </div>
           <StatusBox text="Lesson & Training" color="bg-purple-600" flex />
-          <StatusBar label="Work" subLabel="Stamina" value={`${userState?.stamina ?? 0} / ${userState?.maxStamina ?? 0}`} color="bg-pink-500" />
+          <div onClick={() => onNavigate('work')} className="flex-1 flex">
+            <StatusBar label="Work" subLabel="Stamina" value={`${userState?.stamina ?? 0} / ${userState?.maxStamina ?? 0}`} color="bg-pink-500" />
+          </div>
           <StatusBar label="LIVE Battle" subLabel="Atk Cost" value="2 / 455" color="bg-blue-500" />
           <div onClick={() => onNavigate('formation')} className="flex-1">
             <StatusBox text="Formation" icon={<Users size={16} />} color="bg-green-500" flex />

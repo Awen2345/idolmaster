@@ -13,13 +13,14 @@ import { ALL_CARDS } from './constants';
 import { ErrorBoundary } from './components/ErrorBoundary'; // NEW
 
 import { SoundBoothPage } from './components/SoundBoothPage'; // NEW
+import { WorkPage } from './pages/WorkPage'; // NEW
 
 const CLIENT_VERSION = "1.0.0";
 
 function AppContent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState<'main' | 'petit' | 'formation' | 'gacha' | 'inbox' | 'announcement' | 'cardList' | 'admin' | 'soundbooth'>('main');
+  const [currentPage, setCurrentPage] = useState<'main' | 'petit' | 'formation' | 'gacha' | 'inbox' | 'announcement' | 'cardList' | 'admin' | 'soundbooth' | 'work'>('main');
   
   const [config, setConfig] = useState<any>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
@@ -129,6 +130,8 @@ function AppContent() {
           return <AdminPage onNavigate={handleNavigate} />;
         case 'soundbooth':
           return <SoundBoothPage onNavigate={handleNavigate} />;
+        case 'work':
+          return <WorkPage onNavigate={handleNavigate} />;
         case 'formation':
           return (
             <FormationPage 
