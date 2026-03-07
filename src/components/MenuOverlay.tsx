@@ -76,7 +76,9 @@ export function MenuOverlay({ onClose, onNavigate }: { onClose: () => void, onNa
         {/* Idols Section */}
         <MenuSection title="Idols">
           <div className="grid grid-cols-5 gap-1">
-            <MenuSquareBtn icon={<List size={20} className="text-blue-500" />} label="Idol List/Transfer" borderColor="border-blue-500" small />
+            <div onClick={() => { onClose(); onNavigate('cardList'); }}>
+              <MenuSquareBtn icon={<List size={20} className="text-blue-500" />} label="Card Album" borderColor="border-blue-500" small />
+            </div>
             <MenuSquareBtn icon={<Home size={20} className="text-blue-500" />} label="Dorm/Trainer Room" borderColor="border-blue-500" small />
             <MenuSquareBtn icon={<Building size={20} className="text-green-500" />} label="Production" borderColor="border-green-500" small />
             <MenuSquareBtn icon={<Trophy size={20} className="text-green-500" />} label="PRA" borderColor="border-green-500" small />

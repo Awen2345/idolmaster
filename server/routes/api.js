@@ -153,4 +153,84 @@ router.post("/inbox/claim/:id", async (req, res) => {
   res.json({ success: true });
 });
 
+router.get("/cards", async (req, res) => {
+  const db = await setupDatabase();
+  const { rarity, attribute } = req.query;
+  
+  let query = "SELECT * FROM cards";
+  const params = [];
+  
+  if (rarity || attribute) {
+    query += " WHERE";
+    if (rarity) {
+      query += " rarity = ?";
+      params.push(rarity);
+    }
+    if (attribute) {
+      if (rarity) query += " AND";
+      query += " attribute = ?"; // Assuming we add attribute to schema later, but for now let's skip attribute as it's not in schema yet
+    }
+  }
+  
+  const cards = await db.all(query, params);
+  res.json(cards);
+});
+
+router.post("/admin/fetch-cards", async (req, res) => {
+  const db = await setupDatabase();
+  try {
+    console.log('Fetching card list...');
+    const listRes = await fetch('https://starlight.kirara.ca/api/v1/list/card_t?limit=200');
+    const listData = await listRes.json();
+    const ids = listData.result.map(c => c.id);
+    
+    console.log(`Found ${ids.length} cards. Fetching details...`);
+    
+    const CHUNK_SIZE = 50;
+    let count = 0;
+    
+    for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+      const chunk = ids.slice(i, i + CHUNK_SIZE);
+      const url = `https://starlight.kirara.ca/api/v1/card_t/${chunk.join(',')}`;
+      
+      const res = await fetch(url);
+      const data = await res.json();
+      
+      for (const card of data.result) {
+        const rarityMap = {
+          1: 'N', 2: 'N',
+          3: 'R', 4: 'R',
+          5: 'SR', 6: 'SR',
+          7: 'SSR', 8: 'SSR'
+        };
+        
+        const rarityVal = card.rarity ? card.rarity.rarity : 1;
+        const rarity = rarityMap[rarityVal] || 'N';
+        
+        const costMap = { 'N': 5, 'R': 10, 'SR': 15, 'SSR': 20 };
+        const cost = costMap[rarity] || 5;
+        
+        const atk = (card.vocal_max || 0) + (card.dance_max || 0);
+        const def = (card.visual_max || 0);
+        
+        const name = card.title ? `[${card.title}] ${card.name_only || card.name}` : (card.name_only || card.name);
+        const img = `https://hidamarirhodonite.kirara.ca/icon_card/${card.id}.png`;
+        
+        const attribute = card.attribute ? card.attribute.charAt(0).toUpperCase() + card.attribute.slice(1) : 'Cute';
+
+        await db.run(`
+          INSERT OR REPLACE INTO cards (id, name, img, atk, def, cost, rarity, attribute)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [card.id, name, img, atk, def, cost, rarity, attribute]);
+        count++;
+      }
+    }
+    
+    res.json({ success: true, message: `Imported ${count} cards` });
+  } catch (error) {
+    console.error('Error fetching cards:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

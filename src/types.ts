@@ -8,6 +8,7 @@ export type Card = {
   def: number;
   cost: number;
   rarity: Rarity;
+  attribute?: string;
 };
 
 export type UserState = {
