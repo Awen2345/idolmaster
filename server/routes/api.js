@@ -593,4 +593,141 @@ router.post("/events/:eventId/user/:userId/progress", async (req, res) => {
   res.json(userEvent);
 });
 
+// NEW FEATURE: LOGIN BONUS
+router.post("/login-bonus/:userId", async (req, res) => {
+  const db = await setupDatabase();
+  const { userId } = req.params;
+  
+  // Use current date in YYYY-MM-DD format based on server time
+  const today = new Date().toISOString().split('T')[0];
+  
+  let loginRecord = await db.get("SELECT * FROM user_logins WHERE user_id = ?", [userId]);
+  
+  if (!loginRecord) {
+    await db.run("INSERT INTO user_logins (user_id, last_login_date, consecutive_days, total_days) VALUES (?, ?, 1, 1)", [userId, today]);
+    loginRecord = { user_id: userId, last_login_date: today, consecutive_days: 1, total_days: 1 };
+  } else {
+    if (loginRecord.last_login_date === today) {
+      return res.json({ status: 'already_claimed', record: loginRecord });
+    }
+    
+    const lastLogin = new Date(loginRecord.last_login_date);
+    const currentDate = new Date(today);
+    const diffTime = Math.abs(currentDate.getTime() - lastLogin.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    let newConsecutive = loginRecord.consecutive_days;
+    if (diffDays === 1) {
+      newConsecutive += 1;
+    } else {
+      newConsecutive = 1;
+    }
+    
+    await db.run("UPDATE user_logins SET last_login_date = ?, consecutive_days = ?, total_days = total_days + 1 WHERE user_id = ?", [today, newConsecutive, userId]);
+    loginRecord.last_login_date = today;
+    loginRecord.consecutive_days = newConsecutive;
+    loginRecord.total_days += 1;
+  }
+  
+  // Give reward (e.g., 50 jewels daily, 250 every 7 days)
+  let rewardJewels = 50;
+  if (loginRecord.consecutive_days % 7 === 0) {
+    rewardJewels = 250;
+  }
+  
+  await db.run("UPDATE users SET jewels = jewels + ? WHERE id = ?", [rewardJewels, userId]);
+  
+  res.json({ status: 'claimed', reward: { type: 'jewels', amount: rewardJewels }, record: loginRecord });
+});
+
+// NEW FEATURE: MISSIONS
+router.get("/missions/:userId", async (req, res) => {
+  const db = await setupDatabase();
+  const { userId } = req.params;
+  
+  const today = new Date().toISOString().split('T')[0];
+  
+  // Get all missions
+  const missions = await db.all("SELECT * FROM missions");
+  
+  // Get user progress
+  const userMissions = await db.all("SELECT * FROM user_missions WHERE user_id = ?", [userId]);
+  const userMissionMap = {};
+  for (const um of userMissions) {
+    userMissionMap[um.mission_id] = um;
+  }
+  
+  const result = [];
+  for (const mission of missions) {
+    let progress = userMissionMap[mission.id];
+    
+    if (!progress) {
+      progress = { mission_id: mission.id, progress: 0, completed: 0, claimed: 0, updated_at: today };
+      await db.run("INSERT INTO user_missions (user_id, mission_id, progress, completed, claimed, updated_at) VALUES (?, ?, 0, 0, 0, ?)", [userId, mission.id, today]);
+    } else {
+      // Check for resets
+      if (mission.type === 'daily' && progress.updated_at !== today) {
+        progress.progress = 0;
+        progress.completed = 0;
+        progress.claimed = 0;
+        progress.updated_at = today;
+        await db.run("UPDATE user_missions SET progress = 0, completed = 0, claimed = 0, updated_at = ? WHERE user_id = ? AND mission_id = ?", [today, userId, mission.id]);
+      }
+      // Weekly reset logic could be added here (e.g., checking if it's a new week)
+    }
+    
+    result.push({ ...mission, ...progress });
+  }
+  
+  res.json(result);
+});
+
+router.post("/missions/:userId/progress", async (req, res) => {
+  const db = await setupDatabase();
+  const { userId } = req.params;
+  const { action, amount } = req.body;
+  const today = new Date().toISOString().split('T')[0];
+  
+  const missions = await db.all("SELECT * FROM missions WHERE action = ?", [action]);
+  
+  for (const mission of missions) {
+    let progress = await db.get("SELECT * FROM user_missions WHERE user_id = ? AND mission_id = ?", [userId, mission.id]);
+    
+    if (!progress) {
+      progress = { progress: 0, completed: 0, claimed: 0 };
+      await db.run("INSERT INTO user_missions (user_id, mission_id, progress, completed, claimed, updated_at) VALUES (?, ?, 0, 0, 0, ?)", [userId, mission.id, today]);
+    }
+    
+    if (!progress.completed) {
+      const newProgress = progress.progress + (amount || 1);
+      const completed = newProgress >= mission.target_value ? 1 : 0;
+      await db.run("UPDATE user_missions SET progress = ?, completed = ?, updated_at = ? WHERE user_id = ? AND mission_id = ?", [newProgress, completed, today, userId, mission.id]);
+    }
+  }
+  
+  res.json({ success: true });
+});
+
+router.post("/missions/:userId/claim/:missionId", async (req, res) => {
+  const db = await setupDatabase();
+  const { userId, missionId } = req.params;
+  
+  const mission = await db.get("SELECT * FROM missions WHERE id = ?", [missionId]);
+  const progress = await db.get("SELECT * FROM user_missions WHERE user_id = ? AND mission_id = ?", [userId, missionId]);
+  
+  if (!mission || !progress || !progress.completed || progress.claimed) {
+    return res.status(400).json({ error: "Cannot claim this mission" });
+  }
+  
+  await db.run("UPDATE user_missions SET claimed = 1 WHERE user_id = ? AND mission_id = ?", [userId, missionId]);
+  
+  if (mission.reward_type === 'coins') {
+    await db.run("UPDATE users SET coins = coins + ? WHERE id = ?", [mission.reward_amount, userId]);
+  } else if (mission.reward_type === 'jewels') {
+    await db.run("UPDATE users SET jewels = jewels + ? WHERE id = ?", [mission.reward_amount, userId]);
+  }
+  
+  res.json({ success: true, reward: { type: mission.reward_type, amount: mission.reward_amount } });
+});
+
 export default router;

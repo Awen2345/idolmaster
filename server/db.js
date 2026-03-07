@@ -97,6 +97,36 @@ export async function setupDatabase() {
       FOREIGN KEY(user_id) REFERENCES users(id),
       FOREIGN KEY(event_id) REFERENCES events(id)
     );
+
+    CREATE TABLE IF NOT EXISTS missions (
+      id TEXT PRIMARY KEY,
+      type TEXT,
+      action TEXT,
+      description TEXT,
+      target_value INTEGER,
+      reward_type TEXT,
+      reward_amount INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS user_missions (
+      user_id INTEGER,
+      mission_id TEXT,
+      progress INTEGER DEFAULT 0,
+      completed BOOLEAN DEFAULT 0,
+      claimed BOOLEAN DEFAULT 0,
+      updated_at TEXT,
+      PRIMARY KEY(user_id, mission_id),
+      FOREIGN KEY(user_id) REFERENCES users(id),
+      FOREIGN KEY(mission_id) REFERENCES missions(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS user_logins (
+      user_id INTEGER PRIMARY KEY,
+      last_login_date TEXT,
+      consecutive_days INTEGER DEFAULT 0,
+      total_days INTEGER DEFAULT 0,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
   `);
 
   // Add attribute column if it doesn't exist (for migration)
@@ -164,6 +194,20 @@ export async function setupDatabase() {
       JSON.stringify({ sr_idol: "Uzuki", coins: 5000, card_id: 101 }),
       "Tour the area, battle rivals, and defeat the boss to earn rewards!"
     ]);
+  }
+
+  const missionCount = await db.get("SELECT COUNT(*) as count FROM missions");
+  if (missionCount.count === 0) {
+    const initialMissions = [
+      { id: 'daily_work_1', type: 'daily', action: 'do_work', description: 'Do Work 3 times', target_value: 3, reward_type: 'coins', reward_amount: 1000 },
+      { id: 'daily_live_1', type: 'daily', action: 'play_live', description: 'Play a Live 1 time', target_value: 1, reward_type: 'jewels', reward_amount: 50 },
+      { id: 'weekly_work_1', type: 'weekly', action: 'do_work', description: 'Do Work 20 times', target_value: 20, reward_type: 'jewels', reward_amount: 250 },
+      { id: 'normal_level_10', type: 'normal', action: 'reach_level', description: 'Reach Producer Level 10', target_value: 10, reward_type: 'jewels', reward_amount: 500 }
+    ];
+    for (const m of initialMissions) {
+      await db.run(`INSERT INTO missions (id, type, action, description, target_value, reward_type, reward_amount) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [m.id, m.type, m.action, m.description, m.target_value, m.reward_type, m.reward_amount]);
+    }
   }
 
   dbInstance = db;
