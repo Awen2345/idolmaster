@@ -279,9 +279,91 @@ router.post("/gacha/:id", async (req, res) => {
     
     const result = await db.run("INSERT INTO user_inventory (user_id, card_id) VALUES (?, ?)", [userId, selectedCard.id]);
     newCards.push({ ...selectedCard, inventory_id: result.lastID });
+    
+    // Log history
+    await db.run("INSERT INTO gacha_history (user_id, card_id, banner_type, pulled_at) VALUES (?, ?, ?, ?)", [userId, selectedCard.id, bannerType || 'permanent', new Date().toISOString()]);
   }
 
   res.json({ success: true, newCards });
+});
+
+router.get("/gacha/history/:id", async (req, res) => {
+  const db = await setupDatabase();
+  const userId = req.params.id;
+  
+  const history = await db.all(`
+    SELECT gh.id, gh.banner_type, gh.pulled_at, c.name, c.rarity, c.attribute, c.img 
+    FROM gacha_history gh
+    JOIN cards c ON gh.card_id = c.id
+    WHERE gh.user_id = ?
+    ORDER BY gh.pulled_at DESC
+    LIMIT 100
+  `, [userId]);
+  
+  res.json(history);
+});
+
+const PROMOCODES_FILE = path.join(process.cwd(), "server", "data", "promocodes.json");
+
+function getPromoCodes() {
+  if (fs.existsSync(PROMOCODES_FILE)) {
+    return JSON.parse(fs.readFileSync(PROMOCODES_FILE, "utf-8"));
+  }
+  return {};
+}
+
+router.post("/promocode/redeem", async (req, res) => {
+  const db = await setupDatabase();
+  const { userId, code } = req.body;
+  
+  if (!userId || !code) return res.status(400).json({ error: "Missing userId or code" });
+  
+  const promoCodes = getPromoCodes();
+  const promo = promoCodes[code];
+  
+  if (!promo) {
+    return res.json({ success: false, error: "Invalid promo code" });
+  }
+  
+  // Check expiration
+  if (promo.expiresAt && new Date(promo.expiresAt) < new Date()) {
+    return res.json({ success: false, error: "Promo code expired" });
+  }
+  
+  // Check usage
+  if (promo.usageType === 'one_per_user') {
+    const usage = await db.get("SELECT * FROM promocode_usage WHERE user_id = ? AND code = ?", [userId, code]);
+    if (usage) {
+      return res.json({ success: false, error: "You have already used this code" });
+    }
+  } else if (promo.usageType === 'single_global_use') {
+    const usage = await db.get("SELECT * FROM promocode_usage WHERE code = ?", [code]);
+    if (usage) {
+      return res.json({ success: false, error: "This code has already been redeemed" });
+    }
+  }
+  
+  // Grant rewards
+  const rewards = promo.rewards;
+  let message = "Redeemed: ";
+  
+  if (rewards.starJewels) {
+    await db.run("UPDATE users SET starJewels = starJewels + ? WHERE id = ?", [rewards.starJewels, userId]);
+    message += `${rewards.starJewels} Star Jewels, `;
+  }
+  if (rewards.coins) {
+    await db.run("UPDATE users SET coins = coins + ? WHERE id = ?", [rewards.coins, userId]);
+    message += `${rewards.coins} Coins, `;
+  }
+  if (rewards.staminaDrinks) {
+    await db.run("UPDATE users SET staminaDrinks = staminaDrinks + ? WHERE id = ?", [rewards.staminaDrinks, userId]);
+    message += `${rewards.staminaDrinks} Stamina Drinks, `;
+  }
+  
+  // Log usage
+  await db.run("INSERT INTO promocode_usage (user_id, code, used_at) VALUES (?, ?, ?)", [userId, code, new Date().toISOString()]);
+  
+  res.json({ success: true, message: message.slice(0, -2) });
 });
 
 router.get("/inbox/:id", async (req, res) => {
