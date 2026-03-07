@@ -1,0 +1,24 @@
+{
+  "CINDERELLA2026": {
+    "rewards": {
+      "starJewels": 2500,
+      "coins": 50000
+    },
+    "expiresAt": "2026-12-31T23:59:59Z",
+    "usageType": "one_per_user"
+  },
+  "STARJEWEL500": {
+    "rewards": {
+      "starJewels": 500
+    },
+    "expiresAt": "2026-06-01T00:00:00Z",
+    "usageType": "one_per_user"
+  },
+  "UNIQUE_GIFT_001": {
+    "rewards": {
+      "staminaDrinks": 5
+    },
+    "expiresAt": "2026-12-31T23:59:59Z",
+    "usageType": "single_global_use"
+  }
+}

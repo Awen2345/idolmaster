@@ -7,10 +7,13 @@ import {
 import { NavBtn, StatusBox, StatusBar } from './Shared';
 import { MenuOverlay } from './MenuOverlay';
 import { Card, UserState } from '../types';
+import { FloatingPromoButton } from './FloatingPromoButton';
+import { PromoCodeModal } from './PromoCodeModal';
 
-export function MainPage({ onNavigate, formation, userState }: { onNavigate: (page: string) => void, formation: (Card | null)[], userState: UserState | null }) {
+export function MainPage({ onNavigate, formation, userState, userId, onRefresh }: { onNavigate: (page: string) => void, formation: (Card | null)[], userState: UserState | null, userId: number, onRefresh: () => void }) {
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
 
   // Filter out nulls to display only assigned cards
   const cards = formation.filter((c): c is Card => c !== null);
@@ -159,6 +162,18 @@ export function MainPage({ onNavigate, formation, userState }: { onNavigate: (pa
         <AnimatePresence>
           {isMenuOpen && <MenuOverlay onClose={() => setIsMenuOpen(false)} onNavigate={onNavigate} />}
         </AnimatePresence>
+
+        {/* Promo Code Feature */}
+        <FloatingPromoButton onClick={() => setIsPromoModalOpen(true)} />
+        <PromoCodeModal 
+          isOpen={isPromoModalOpen} 
+          onClose={() => setIsPromoModalOpen(false)} 
+          userId={userId}
+          onRedeemSuccess={() => {
+            onRefresh();
+            // Optional: Close modal after a delay or keep it open to show success
+          }}
+        />
       </div>
     </div>
   );

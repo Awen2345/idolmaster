@@ -382,4 +382,69 @@ router.post("/admin/fetch-cards", async (req, res) => {
   }
 });
 
+// NEW FEATURE: PROMOCODE SYSTEM
+router.post("/promocode/redeem", async (req, res) => {
+  const db = await setupDatabase();
+  const { userId, code } = req.body;
+
+  if (!userId || !code) {
+    return res.status(400).json({ success: false, message: "Missing userId or code" });
+  }
+
+  try {
+    // 1. Load Promocodes Config
+    const promoConfigPath = path.join(process.cwd(), "config", "promocodes.json");
+    if (!fs.existsSync(promoConfigPath)) {
+      return res.status(500).json({ success: false, message: "Promo system unavailable" });
+    }
+
+    const promoCodes = JSON.parse(fs.readFileSync(promoConfigPath, "utf-8"));
+    const promo = promoCodes[code];
+
+    // 2. Validate Code Exists
+    if (!promo) {
+      return res.json({ success: false, message: "Invalid promo code" });
+    }
+
+    // 3. Check Expiration
+    if (promo.expiresAt && new Date(promo.expiresAt) < new Date()) {
+      return res.json({ success: false, message: "Promo code expired" });
+    }
+
+    // 4. Check Global Usage Limit
+    if (promo.maxGlobalUse) {
+      const globalUsage = await db.get("SELECT COUNT(*) as count FROM user_promocode_usage WHERE code = ?", [code]);
+      if (globalUsage.count >= promo.maxGlobalUse) {
+        return res.json({ success: false, message: "Promo code usage limit reached" });
+      }
+    }
+
+    // 5. Check User Usage (Single Use)
+    if (promo.usageType === "single") {
+      const userUsage = await db.get("SELECT * FROM user_promocode_usage WHERE user_id = ? AND code = ?", [userId, code]);
+      if (userUsage) {
+        return res.json({ success: false, message: "You have already used this code" });
+      }
+    }
+
+    // 6. Apply Rewards
+    const { reward } = promo;
+    if (reward.coins) {
+      await db.run("UPDATE users SET coins = coins + ? WHERE id = ?", [reward.coins, userId]);
+    }
+    if (reward.jewels) {
+      await db.run("UPDATE users SET starJewels = starJewels + ? WHERE id = ?", [reward.jewels, userId]);
+    }
+
+    // 7. Record Usage
+    await db.run("INSERT INTO user_promocode_usage (user_id, code, used_at) VALUES (?, ?, ?)", [userId, code, new Date().toISOString()]);
+
+    return res.json({ success: true, reward });
+
+  } catch (error) {
+    console.error("Promo code error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
 export default router;

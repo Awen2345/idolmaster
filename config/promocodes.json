@@ -1,0 +1,18 @@
+{
+  "WELCOME2026": {
+    "reward": {
+      "coins": 500,
+      "jewels": 50
+    },
+    "expiresAt": "2026-12-31T23:59:59Z",
+    "usageType": "single",
+    "maxGlobalUse": 1000
+  },
+  "FREEGEMS": {
+    "reward": {
+      "jewels": 100
+    },
+    "expiresAt": "2026-08-01T00:00:00Z",
+    "usageType": "multiple"
+  }
+}

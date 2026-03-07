@@ -146,5 +146,13 @@ export default function App() {
     );
   }
 
-  return <MainPage onNavigate={setCurrentPage} formation={formation} userState={userState} />;
+  return (
+    <MainPage 
+      onNavigate={setCurrentPage} 
+      formation={formation} 
+      userState={userState} 
+      userId={userId!} 
+      onRefresh={() => userId && fetchUserData(userId)}
+    />
+  );
 }
