@@ -15,13 +15,16 @@ import { ErrorBoundary } from './components/ErrorBoundary'; // NEW
 import { SoundBoothPage } from './components/SoundBoothPage'; // NEW
 import { WorkPage } from './pages/WorkPage'; // NEW
 import { LiveBattlePage } from './pages/LiveBattlePage'; // NEW
+import { EventHubPage } from './pages/EventHubPage'; // NEW
+import { TourEventPage } from './pages/TourEventPage'; // NEW
 
 const CLIENT_VERSION = "1.0.0";
 
 function AppContent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState<'main' | 'petit' | 'formation' | 'gacha' | 'inbox' | 'announcement' | 'cardList' | 'admin' | 'soundbooth' | 'work' | 'live'>('main');
+  const [currentPage, setCurrentPage] = useState<'main' | 'petit' | 'formation' | 'gacha' | 'inbox' | 'announcement' | 'cardList' | 'admin' | 'soundbooth' | 'work' | 'live' | 'events' | 'event_tour'>('main');
+  const [currentEventId, setCurrentEventId] = useState<string | null>(null);
   
   const [config, setConfig] = useState<any>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
@@ -67,7 +70,10 @@ function AppContent() {
     setIsLoggedIn(true);
   };
 
-  const handleNavigate = (page: string) => {
+  const handleNavigate = (page: string, params?: any) => {
+    if (page.startsWith('event_')) {
+      setCurrentEventId(params?.eventId || null);
+    }
     setCurrentPage(page as any);
   };
 
@@ -135,6 +141,10 @@ function AppContent() {
           return <WorkPage onNavigate={handleNavigate} formation={formation} userId={userId!} />;
         case 'live':
           return <LiveBattlePage onNavigate={handleNavigate} formation={formation} userId={userId!} />;
+        case 'events':
+          return <EventHubPage onNavigate={handleNavigate} userId={userId!} />;
+        case 'event_tour':
+          return <TourEventPage onNavigate={handleNavigate} formation={formation} userId={userId!} eventId={currentEventId!} />;
         case 'formation':
           return (
             <FormationPage 

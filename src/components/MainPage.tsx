@@ -163,14 +163,11 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
 
         {/* Banner */}
         <div className="p-2 bg-slate-900 flex-1 flex items-center justify-center relative z-10">
-          <div onClick={() => onNavigate('gacha')} className="w-full h-20 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg border-2 border-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)] flex items-center justify-center overflow-hidden relative cursor-pointer">
+          <div onClick={() => onNavigate('events')} className="w-full h-20 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg border-2 border-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)] flex items-center justify-center overflow-hidden relative cursor-pointer hover:brightness-110 transition-all">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-50"></div>
             <div className="relative z-10 text-center">
-              <h3 className="text-white font-black text-xl drop-shadow-md tracking-wider">Idol Produce</h3>
-              <p className="text-yellow-300 font-bold text-sm drop-shadow-md">the 5th Anniversary</p>
-              <div className="bg-black/60 text-white text-xs px-2 py-1 rounded mt-1 inline-block border border-white/30">
-                Until Round Ends <span className="text-yellow-400 font-bold">Remaining 20:48:15</span>
-              </div>
+              <h3 className="text-white font-black text-xl drop-shadow-md tracking-wider">Event Hub</h3>
+              <p className="text-yellow-300 font-bold text-sm drop-shadow-md">Join active events!</p>
             </div>
           </div>
         </div>

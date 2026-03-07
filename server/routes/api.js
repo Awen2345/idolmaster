@@ -542,4 +542,55 @@ router.post("/live/:id", async (req, res) => {
   });
 });
 
+// NEW FEATURE: EVENT SYSTEM
+router.get("/events", async (req, res) => {
+  const db = await setupDatabase();
+  const events = await db.all("SELECT * FROM events");
+  
+  // Parse rewards JSON
+  const parsedEvents = events.map(e => ({
+    ...e,
+    rewards: e.rewards ? JSON.parse(e.rewards) : null
+  }));
+
+  res.json(parsedEvents);
+});
+
+router.get("/events/:eventId/user/:userId", async (req, res) => {
+  const db = await setupDatabase();
+  const { eventId, userId } = req.params;
+
+  let userEvent = await db.get("SELECT * FROM user_events WHERE user_id = ? AND event_id = ?", [userId, eventId]);
+  
+  if (!userEvent) {
+    // Initialize if not exists
+    await db.run("INSERT INTO user_events (user_id, event_id, progress, points) VALUES (?, ?, 0, 0)", [userId, eventId]);
+    userEvent = { user_id: userId, event_id: eventId, progress: 0, points: 0 };
+  }
+
+  res.json(userEvent);
+});
+
+router.post("/events/:eventId/user/:userId/progress", async (req, res) => {
+  const db = await setupDatabase();
+  const { eventId, userId } = req.params;
+  const { progressAdd, pointsAdd } = req.body;
+
+  let userEvent = await db.get("SELECT * FROM user_events WHERE user_id = ? AND event_id = ?", [userId, eventId]);
+  
+  if (!userEvent) {
+    await db.run("INSERT INTO user_events (user_id, event_id, progress, points) VALUES (?, ?, ?, ?)", [userId, eventId, progressAdd, pointsAdd]);
+    userEvent = { user_id: userId, event_id: eventId, progress: progressAdd, points: pointsAdd };
+  } else {
+    const newProgress = Math.min(100, userEvent.progress + progressAdd);
+    const newPoints = userEvent.points + pointsAdd;
+    
+    await db.run("UPDATE user_events SET progress = ?, points = ? WHERE user_id = ? AND event_id = ?", [newProgress, newPoints, userId, eventId]);
+    userEvent.progress = newProgress;
+    userEvent.points = newPoints;
+  }
+
+  res.json(userEvent);
+});
+
 export default router;

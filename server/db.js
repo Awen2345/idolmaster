@@ -77,6 +77,26 @@ export async function setupDatabase() {
       used_at TEXT,
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS events (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      type TEXT,
+      start_date TEXT,
+      end_date TEXT,
+      rewards TEXT,
+      description TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS user_events (
+      user_id INTEGER,
+      event_id TEXT,
+      progress INTEGER DEFAULT 0,
+      points INTEGER DEFAULT 0,
+      PRIMARY KEY(user_id, event_id),
+      FOREIGN KEY(user_id) REFERENCES users(id),
+      FOREIGN KEY(event_id) REFERENCES events(id)
+    );
   `);
 
   // Add attribute column if it doesn't exist (for migration)
@@ -128,6 +148,22 @@ export async function setupDatabase() {
     for (const card of ALL_CARDS) {
       await db.run("INSERT INTO cards (id, name, img, atk, def, cost, rarity, attribute, passiveSkill, liveSkill) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [card.id, card.name, card.img, card.atk, card.def, card.cost, card.rarity, card.attribute, card.passiveSkill, card.liveSkill]);
     }
+  }
+
+  const eventCount = await db.get("SELECT COUNT(*) as count FROM events");
+  if (eventCount.count === 0) {
+    await db.run(`
+      INSERT INTO events (id, name, type, start_date, end_date, rewards, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      "event001",
+      "Production Match Festival",
+      "tour",
+      "2026-03-01T00:00:00Z",
+      "2026-03-14T23:59:59Z",
+      JSON.stringify({ sr_idol: "Uzuki", coins: 5000, card_id: 101 }),
+      "Tour the area, battle rivals, and defeat the boss to earn rewards!"
+    ]);
   }
 
   dbInstance = db;
