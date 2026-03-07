@@ -64,24 +64,6 @@ export async function setupDatabase() {
       claimed BOOLEAN DEFAULT 0,
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
-
-    CREATE TABLE IF NOT EXISTS gacha_history (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      card_id INTEGER,
-      banner_type TEXT,
-      pulled_at TEXT,
-      FOREIGN KEY(user_id) REFERENCES users(id),
-      FOREIGN KEY(card_id) REFERENCES cards(id)
-    );
-
-    CREATE TABLE IF NOT EXISTS promocode_usage (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      code TEXT,
-      used_at TEXT,
-      FOREIGN KEY(user_id) REFERENCES users(id)
-    );
   `);
 
   // Add attribute column if it doesn't exist (for migration)

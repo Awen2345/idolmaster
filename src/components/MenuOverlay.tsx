@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
 import { 
   Home, Bird, Mic2, Music, RefreshCcw, X, 
@@ -8,38 +8,7 @@ import {
 } from 'lucide-react';
 import { NavBtn, MenuCircleBtn, MenuSquareBtn, MenuSection, BottomNavBtn } from './Shared';
 
-export function MenuOverlay({ onClose, onNavigate, userId }: { onClose: () => void, onNavigate: (page: string) => void, userId: number | null }) {
-  const [showPromo, setShowPromo] = useState(false);
-  const [promoCode, setPromoCode] = useState('');
-  const [promoLoading, setPromoLoading] = useState(false);
-
-  const handleRedeem = async () => {
-    if (!promoCode || !userId) return;
-    setPromoLoading(true);
-    
-    try {
-      const res = await fetch('/api/promocode/redeem', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, code: promoCode })
-      });
-      const data = await res.json();
-      
-      if (data.success) {
-        alert(data.message);
-        setPromoCode('');
-        setShowPromo(false);
-      } else {
-        alert(data.error || "Redemption failed");
-      }
-    } catch (err) {
-      console.error("Promo error", err);
-      alert("Network error");
-    } finally {
-      setPromoLoading(false);
-    }
-  };
-
+export function MenuOverlay({ onClose, onNavigate }: { onClose: () => void, onNavigate: (page: string) => void }) {
   return (
     <motion.div 
       initial={{ opacity: 0, y: -20 }}
@@ -47,44 +16,6 @@ export function MenuOverlay({ onClose, onNavigate, userId }: { onClose: () => vo
       exit={{ opacity: 0, y: -20 }}
       className="absolute inset-0 z-50 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] bg-slate-900 flex flex-col overflow-y-auto"
     >
-      {/* Promo Code Modal */}
-      {showPromo && (
-        <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl border-2 border-pink-400"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-pink-600 flex items-center gap-2">
-                <Ticket className="w-6 h-6" />
-                Enter Promo Code
-              </h3>
-              <button onClick={() => setShowPromo(false)} className="text-gray-500 hover:text-gray-700">
-                <X size={24} />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">
-              Enter a valid serial code to receive special rewards!
-            </p>
-            <input 
-              type="text" 
-              value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-              className="w-full border-2 border-gray-300 rounded-lg p-3 text-center font-mono text-lg uppercase mb-4 focus:border-pink-500 outline-none"
-              placeholder="ENTER CODE"
-            />
-            <button 
-              onClick={handleRedeem}
-              disabled={promoLoading || !promoCode}
-              className="w-full bg-gradient-to-r from-pink-500 to-rose-600 text-white font-bold py-3 rounded-lg shadow-md hover:brightness-110 disabled:opacity-50 transition-all"
-            >
-              {promoLoading ? 'Verifying...' : 'Redeem'}
-            </button>
-          </motion.div>
-        </div>
-      )}
-
       {/* Top Nav (Replicated but with Close button) */}
       <header className="flex justify-between items-center bg-gradient-to-b from-blue-800 to-blue-950 p-1 border-b-2 border-blue-400 shadow-md sticky top-0 z-20">
         <div onClick={() => { onClose(); onNavigate('main'); }}>
@@ -132,16 +63,13 @@ export function MenuOverlay({ onClose, onNavigate, userId }: { onClose: () => vo
 
         {/* Items Section */}
         <MenuSection title="Items">
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             <MenuSquareBtn icon={<ShoppingCart size={24} className="text-pink-500" />} label="Shop" borderColor="border-pink-500" />
             <MenuSquareBtn icon={<List size={24} className="text-pink-500" />} label="Item List" borderColor="border-pink-500" />
             <div onClick={() => { onClose(); onNavigate('inbox'); }}>
               <MenuSquareBtn icon={<Gift size={24} className="text-pink-500" />} label="Gifts" borderColor="border-pink-500" />
             </div>
             <MenuSquareBtn icon={<RefreshCw size={24} className="text-pink-500" />} label="Exchange" borderColor="border-pink-500" />
-            <div onClick={() => setShowPromo(true)}>
-              <MenuSquareBtn icon={<Ticket size={24} className="text-pink-500" />} label="Promo Code" borderColor="border-pink-500" />
-            </div>
           </div>
         </MenuSection>
 

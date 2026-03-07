@@ -8,7 +8,7 @@ import { NavBtn, StatusBox, StatusBar } from './Shared';
 import { MenuOverlay } from './MenuOverlay';
 import { Card, UserState } from '../types';
 
-export function MainPage({ onNavigate, formation, userState, userId }: { onNavigate: (page: string) => void, formation: (Card | null)[], userState: UserState | null, userId: number | null }) {
+export function MainPage({ onNavigate, formation, userState }: { onNavigate: (page: string) => void, formation: (Card | null)[], userState: UserState | null }) {
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -157,7 +157,7 @@ export function MainPage({ onNavigate, formation, userState, userId }: { onNavig
         </div>
 
         <AnimatePresence>
-          {isMenuOpen && <MenuOverlay onClose={() => setIsMenuOpen(false)} onNavigate={onNavigate} userId={userId} />}
+          {isMenuOpen && <MenuOverlay onClose={() => setIsMenuOpen(false)} onNavigate={onNavigate} />}
         </AnimatePresence>
       </div>
     </div>
