@@ -207,9 +207,9 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
                       card.rarity === 'SSR' ? 'border-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.8)]' : 
                       card.rarity === 'SR' ? 'border-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.6)]' : 
                       'border-gray-400'
-                    } ${pullResults.length === 1 ? 'w-48 aspect-[2/3]' : 'w-full aspect-[2/3]'}`}
+                    } ${pullResults.length === 1 ? 'w-64' : 'w-full'}`}
                   >
-                    <img src={card.img} alt={card.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={card.img} alt={card.name} className="w-full h-auto object-cover" referrerPolicy="no-referrer" />
                     <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[8px] text-center py-0.5 font-bold truncate px-1">
                       {card.name}
                     </div>

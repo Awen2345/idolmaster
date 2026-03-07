@@ -116,11 +116,11 @@ export function CardListPage({ onNavigate }: CardListPageProps) {
                       animate={{ opacity: 1, scale: 1 }}
                       className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700 hover:border-indigo-500 transition-colors group"
                     >
-                      <div className="aspect-[3/4] relative bg-slate-900">
+                      <div className="relative bg-slate-900">
                         <img 
                           src={card.img} 
                           alt={card.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-auto object-cover"
                           referrerPolicy="no-referrer"
                           loading="lazy"
                         />

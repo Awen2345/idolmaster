@@ -214,7 +214,7 @@ router.post("/admin/fetch-cards", async (req, res) => {
         const def = (card.visual_max || 0);
         
         const name = card.title ? `[${card.title}] ${card.name_only || card.name}` : (card.name_only || card.name);
-        const img = `https://hidamarirhodonite.kirara.ca/icon_card/${card.id}.png`;
+        const img = `https://hidamarirhodonite.kirara.ca/card/${card.id}.png`;
         
         const attribute = card.attribute ? card.attribute.charAt(0).toUpperCase() + card.attribute.slice(1) : 'Cute';
 
