@@ -4,7 +4,7 @@ import {
   Home, Bird, Mic2, Music, RefreshCcw, X, 
   Star, Swords, ShoppingCart, List, Gift, RefreshCw, 
   Building, Trophy, User, Heart, BookOpen, Gamepad2, 
-  Headphones, Settings, HelpCircle, ChevronLeft, ChevronRight, RotateCw, Users, Menu
+  Headphones, Settings, HelpCircle, ChevronLeft, ChevronRight, RotateCw, Users, Menu, Shield
 } from 'lucide-react';
 import { NavBtn, MenuCircleBtn, MenuSquareBtn, MenuSection, BottomNavBtn } from './Shared';
 
@@ -88,11 +88,14 @@ export function MenuOverlay({ onClose, onNavigate }: { onClose: () => void, onNa
 
         {/* Others Section */}
         <MenuSection title="Others">
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-5 gap-2">
             <MenuSquareBtn icon={<Heart size={24} className="text-orange-500" />} label="Favorites" borderColor="border-orange-500" />
             <MenuSquareBtn icon={<BookOpen size={24} className="text-orange-500" />} label="Archive" borderColor="border-orange-500" />
             <MenuSquareBtn icon={<Gamepad2 size={24} className="text-orange-500" />} label="Game Center" borderColor="border-orange-500" />
             <MenuSquareBtn icon={<Headphones size={24} className="text-orange-500" />} label="Sound Booth" borderColor="border-orange-500" />
+            <div onClick={() => { onClose(); onNavigate('admin'); }}>
+              <MenuSquareBtn icon={<Shield size={24} className="text-red-500" />} label="Admin" borderColor="border-red-500" />
+            </div>
           </div>
         </MenuSection>
 

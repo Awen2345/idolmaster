@@ -22,7 +22,9 @@ export async function setupDatabase() {
       coins INTEGER DEFAULT 150000,
       stamina INTEGER DEFAULT 50,
       maxStamina INTEGER DEFAULT 50,
-      staminaDrinks INTEGER DEFAULT 10
+      staminaDrinks INTEGER DEFAULT 10,
+      banned_until TEXT,
+      ban_reason TEXT
     );
 
     CREATE TABLE IF NOT EXISTS cards (
@@ -69,6 +71,14 @@ export async function setupDatabase() {
     await db.exec("ALTER TABLE cards ADD COLUMN attribute TEXT");
   } catch (e) {
     // Column likely already exists
+  }
+
+  // Add ban columns if they don't exist
+  try {
+    await db.exec("ALTER TABLE users ADD COLUMN banned_until TEXT");
+    await db.exec("ALTER TABLE users ADD COLUMN ban_reason TEXT");
+  } catch (e) {
+    // Columns likely already exist
   }
 
   // Seed initial cards if empty

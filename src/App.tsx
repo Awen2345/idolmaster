@@ -7,6 +7,7 @@ import { GachaPage } from './components/GachaPage';
 import { InboxPage } from './components/InboxPage';
 import { AnnouncementPage } from './components/AnnouncementPage';
 import { CardListPage } from './components/CardListPage';
+import { AdminPage } from './components/AdminPage';
 import { Card, UserState } from './types';
 import { ALL_CARDS } from './constants';
 
@@ -15,7 +16,7 @@ const CLIENT_VERSION = "1.0.0";
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState<'main' | 'petit' | 'formation' | 'gacha' | 'inbox' | 'announcement' | 'cardList'>('main');
+  const [currentPage, setCurrentPage] = useState<'main' | 'petit' | 'formation' | 'gacha' | 'inbox' | 'announcement' | 'cardList' | 'admin'>('main');
   
   const [config, setConfig] = useState<any>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
@@ -119,6 +120,10 @@ export default function App() {
 
   if (currentPage === 'cardList') {
     return <CardListPage onNavigate={setCurrentPage} />;
+  }
+
+  if (currentPage === 'admin') {
+    return <AdminPage onNavigate={setCurrentPage} />;
   }
 
   if (currentPage === 'formation') {

@@ -20,6 +20,22 @@ router.post("/login", async (req, res) => {
   const { username, password } = req.body;
   let user = await db.get("SELECT * FROM users WHERE username = ?", [username]);
   
+  if (user) {
+    // Check if banned
+    if (user.banned_until) {
+      const banEnd = new Date(user.banned_until);
+      if (banEnd > new Date()) {
+        return res.json({ 
+          success: false, 
+          error: `Account banned until ${banEnd.toLocaleString()}. Reason: ${user.ban_reason || 'No reason provided'}` 
+        });
+      } else {
+        // Ban expired, clear it
+        await db.run("UPDATE users SET banned_until = NULL, ban_reason = NULL WHERE id = ?", [user.id]);
+      }
+    }
+  }
+
   if (!user) {
     // Auto-register for demo purposes
     const result = await db.run("INSERT INTO users (username, password) VALUES (?, ?)", [username, password]);
@@ -37,6 +53,38 @@ router.post("/login", async (req, res) => {
   }
 
   res.json({ success: true, userId: user.id });
+});
+
+router.post("/admin/ban", async (req, res) => {
+  const db = await setupDatabase();
+  const { userId, durationMinutes, reason } = req.body;
+  
+  if (!userId || !durationMinutes) {
+    return res.status(400).json({ error: "Missing userId or duration" });
+  }
+
+  const banEnd = new Date(Date.now() + durationMinutes * 60000).toISOString();
+  
+  await db.run("UPDATE users SET banned_until = ?, ban_reason = ? WHERE id = ?", [banEnd, reason, userId]);
+  
+  res.json({ success: true, bannedUntil: banEnd });
+});
+
+router.post("/admin/unban", async (req, res) => {
+  const db = await setupDatabase();
+  const { userId } = req.body;
+  
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
+  
+  await db.run("UPDATE users SET banned_until = NULL, ban_reason = NULL WHERE id = ?", [userId]);
+  
+  res.json({ success: true });
+});
+
+router.get("/admin/users", async (req, res) => {
+  const db = await setupDatabase();
+  const users = await db.all("SELECT id, username, banned_until, ban_reason FROM users");
+  res.json(users);
 });
 
 router.get("/user/:id", async (req, res) => {
