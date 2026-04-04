@@ -635,7 +635,7 @@ router.post("/login-bonus/:userId", async (req, res) => {
     rewardJewels = 250;
   }
   
-  await db.run("UPDATE users SET jewels = jewels + ? WHERE id = ?", [rewardJewels, userId]);
+  await db.run("UPDATE users SET starJewels = starJewels + ? WHERE id = ?", [rewardJewels, userId]);
   
   res.json({ status: 'claimed', reward: { type: 'jewels', amount: rewardJewels }, record: loginRecord });
 });
@@ -724,7 +724,7 @@ router.post("/missions/:userId/claim/:missionId", async (req, res) => {
   if (mission.reward_type === 'coins') {
     await db.run("UPDATE users SET coins = coins + ? WHERE id = ?", [mission.reward_amount, userId]);
   } else if (mission.reward_type === 'jewels') {
-    await db.run("UPDATE users SET jewels = jewels + ? WHERE id = ?", [mission.reward_amount, userId]);
+    await db.run("UPDATE users SET starJewels = starJewels + ? WHERE id = ?", [mission.reward_amount, userId]);
   }
   
   res.json({ success: true, reward: { type: mission.reward_type, amount: mission.reward_amount } });
@@ -780,7 +780,7 @@ router.post("/commus/:userId/read/:commuId", async (req, res) => {
     
     // Give reward for first time read
     if (commu.reward_type === 'jewels') {
-      await db.run("UPDATE users SET jewels = jewels + ? WHERE id = ?", [commu.reward_amount, userId]);
+      await db.run("UPDATE users SET starJewels = starJewels + ? WHERE id = ?", [commu.reward_amount, userId]);
     } else if (commu.reward_type === 'coins') {
       await db.run("UPDATE users SET coins = coins + ? WHERE id = ?", [commu.reward_amount, userId]);
     }
