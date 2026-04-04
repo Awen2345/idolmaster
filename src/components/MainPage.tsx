@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Star, Music, Gift, Users, Lightbulb, 
-  Menu, Home, Bird, RefreshCcw, Mic2, Coins
+  Menu, Home, Bird, RefreshCcw, Mic2, Coins, Calendar
 } from 'lucide-react';
 import { NavBtn, StatusBox, StatusBar } from './Shared';
 import { MenuOverlay } from './MenuOverlay';
@@ -14,6 +14,21 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
+  const [loginBonus, setLoginBonus] = useState<any>(null);
+
+  useEffect(() => {
+    if (userId) {
+      fetch(`/api/login-bonus/${userId}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'claimed') {
+            setLoginBonus(data);
+            onRefresh();
+          }
+        })
+        .catch(err => console.error("Failed to claim login bonus", err));
+    }
+  }, [userId]);
 
   // Filter out nulls to display only assigned cards
   const cards = formation.filter((c): c is Card => c !== null);
@@ -184,9 +199,49 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
           userId={userId}
           onRedeemSuccess={() => {
             onRefresh();
-            // Optional: Close modal after a delay or keep it open to show success
           }}
         />
+
+        {/* Login Bonus Popup */}
+        <AnimatePresence>
+          {loginBonus && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+            >
+              <motion.div 
+                initial={{ scale: 0.8, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                className="bg-gradient-to-b from-blue-600 to-indigo-900 rounded-2xl border-4 border-yellow-400 p-6 w-full max-w-sm text-center shadow-2xl relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div>
+                
+                <div className="relative z-10">
+                  <h2 className="text-3xl font-black text-white drop-shadow-md italic tracking-wider mb-2">LOGIN BONUS</h2>
+                  
+                  <div className="bg-black/40 rounded-xl p-4 mb-4 border border-blue-400">
+                    <div className="text-yellow-300 font-bold mb-1">Day {loginBonus.record.consecutive_days}</div>
+                    <div className="flex justify-center items-center gap-2 text-2xl font-black text-white">
+                      {loginBonus.reward.type === 'jewels' ? <Star className="text-pink-400" fill="currentColor" size={32} /> : <Coins className="text-yellow-400" size={32} />}
+                      +{loginBonus.reward.amount}
+                    </div>
+                  </div>
+                  
+                  <p className="text-blue-200 text-sm mb-6">Log in every day for more rewards!</p>
+                  
+                  <button 
+                    onClick={() => setLoginBonus(null)}
+                    className="bg-gradient-to-r from-pink-500 to-rose-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:brightness-110 w-full"
+                  >
+                    CLAIM
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

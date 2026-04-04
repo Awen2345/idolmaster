@@ -730,4 +730,65 @@ router.post("/missions/:userId/claim/:missionId", async (req, res) => {
   res.json({ success: true, reward: { type: mission.reward_type, amount: mission.reward_amount } });
 });
 
+// NEW FEATURE: COMMU
+router.get("/commus/:userId", async (req, res) => {
+  const db = await setupDatabase();
+  const { userId } = req.params;
+  
+  const commus = await db.all("SELECT * FROM commus");
+  const userCommus = await db.all("SELECT * FROM user_commus WHERE user_id = ?", [userId]);
+  const userInventory = await db.all("SELECT card_id FROM user_inventory WHERE user_id = ?", [userId]);
+  
+  const readMap = {};
+  for (const uc of userCommus) {
+    readMap[uc.commu_id] = uc.is_read;
+  }
+  
+  const inventorySet = new Set(userInventory.map(i => i.card_id));
+  
+  const result = commus.map(c => {
+    let isUnlocked = false;
+    if (c.unlock_condition === 'none') {
+      isUnlocked = true;
+    } else if (c.unlock_condition.startsWith('card_')) {
+      const cardId = parseInt(c.unlock_condition.split('_')[1]);
+      isUnlocked = inventorySet.has(cardId);
+    }
+    
+    return {
+      ...c,
+      script: JSON.parse(c.script),
+      is_read: readMap[c.id] || 0,
+      is_unlocked: isUnlocked
+    };
+  });
+  
+  res.json(result);
+});
+
+router.post("/commus/:userId/read/:commuId", async (req, res) => {
+  const db = await setupDatabase();
+  const { userId, commuId } = req.params;
+  
+  const commu = await db.get("SELECT * FROM commus WHERE id = ?", [commuId]);
+  if (!commu) return res.status(404).json({ error: "Commu not found" });
+  
+  let userCommu = await db.get("SELECT * FROM user_commus WHERE user_id = ? AND commu_id = ?", [userId, commuId]);
+  
+  if (!userCommu) {
+    await db.run("INSERT INTO user_commus (user_id, commu_id, is_read) VALUES (?, ?, 1)", [userId, commuId]);
+    
+    // Give reward for first time read
+    if (commu.reward_type === 'jewels') {
+      await db.run("UPDATE users SET jewels = jewels + ? WHERE id = ?", [commu.reward_amount, userId]);
+    } else if (commu.reward_type === 'coins') {
+      await db.run("UPDATE users SET coins = coins + ? WHERE id = ?", [commu.reward_amount, userId]);
+    }
+    
+    res.json({ success: true, first_read: true, reward: { type: commu.reward_type, amount: commu.reward_amount } });
+  } else {
+    res.json({ success: true, first_read: false });
+  }
+});
+
 export default router;

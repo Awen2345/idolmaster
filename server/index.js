@@ -13,6 +13,11 @@ async function startServer() {
 
   // Real-time request and response logging middleware
   app.use((req, res, next) => {
+    // Only log API requests, ignore Vite's internal file requests
+    if (!req.originalUrl.startsWith('/api')) {
+      return next();
+    }
+
     const start = Date.now();
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Body:`, req.body);
     

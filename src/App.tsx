@@ -17,14 +17,18 @@ import { WorkPage } from './pages/WorkPage'; // NEW
 import { LiveBattlePage } from './pages/LiveBattlePage'; // NEW
 import { EventHubPage } from './pages/EventHubPage'; // NEW
 import { TourEventPage } from './pages/TourEventPage'; // NEW
+import { CommuMenuPage } from './pages/CommuMenuPage'; // NEW
+import { CommuListPage } from './pages/CommuListPage'; // NEW
+import { CommuReaderPage } from './pages/CommuReaderPage'; // NEW
 
 const CLIENT_VERSION = "1.0.0";
 
 function AppContent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState<'main' | 'petit' | 'formation' | 'gacha' | 'inbox' | 'announcement' | 'cardList' | 'admin' | 'soundbooth' | 'work' | 'live' | 'events' | 'event_tour'>('main');
+  const [currentPage, setCurrentPage] = useState<'main' | 'petit' | 'formation' | 'gacha' | 'inbox' | 'announcement' | 'cardList' | 'admin' | 'soundbooth' | 'work' | 'live' | 'events' | 'event_tour' | 'commu' | 'commu_list' | 'commu_reader'>('main');
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
+  const [commuParams, setCommuParams] = useState<any>(null);
   
   const [config, setConfig] = useState<any>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
@@ -73,6 +77,9 @@ function AppContent() {
   const handleNavigate = (page: string, params?: any) => {
     if (page.startsWith('event_')) {
       setCurrentEventId(params?.eventId || null);
+    }
+    if (page.startsWith('commu_')) {
+      setCommuParams(params);
     }
     setCurrentPage(page as any);
   };
@@ -145,6 +152,12 @@ function AppContent() {
           return <EventHubPage onNavigate={handleNavigate} userId={userId!} />;
         case 'event_tour':
           return <TourEventPage onNavigate={handleNavigate} formation={formation} userId={userId!} eventId={currentEventId!} />;
+        case 'commu':
+          return <CommuMenuPage onNavigate={handleNavigate} userId={userId!} />;
+        case 'commu_list':
+          return <CommuListPage onNavigate={handleNavigate} type={commuParams?.type} commus={commuParams?.commus} />;
+        case 'commu_reader':
+          return <CommuReaderPage onNavigate={handleNavigate} commu={commuParams?.commu} userId={userId!} />;
         case 'formation':
           return (
             <FormationPage 

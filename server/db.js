@@ -127,6 +127,25 @@ export async function setupDatabase() {
       total_days INTEGER DEFAULT 0,
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS commus (
+      id TEXT PRIMARY KEY,
+      title TEXT,
+      type TEXT,
+      unlock_condition TEXT,
+      reward_type TEXT,
+      reward_amount INTEGER,
+      script TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS user_commus (
+      user_id INTEGER,
+      commu_id TEXT,
+      is_read BOOLEAN DEFAULT 0,
+      PRIMARY KEY(user_id, commu_id),
+      FOREIGN KEY(user_id) REFERENCES users(id),
+      FOREIGN KEY(commu_id) REFERENCES commus(id)
+    );
   `);
 
   // Add attribute column if it doesn't exist (for migration)
@@ -207,6 +226,44 @@ export async function setupDatabase() {
     for (const m of initialMissions) {
       await db.run(`INSERT INTO missions (id, type, action, description, target_value, reward_type, reward_amount) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [m.id, m.type, m.action, m.description, m.target_value, m.reward_type, m.reward_amount]);
+    }
+  }
+
+  const commuCount = await db.get("SELECT COUNT(*) as count FROM commus");
+  if (commuCount.count === 0) {
+    const initialCommus = [
+      {
+        id: 'story_1',
+        title: 'Prologue: A New Beginning',
+        type: 'story',
+        unlock_condition: 'none',
+        reward_type: 'jewels',
+        reward_amount: 50,
+        script: JSON.stringify([
+          { speaker: 'Producer', text: 'Today is my first day at the production agency...', sprite: null, position: 'center', expression: 'normal' },
+          { speaker: 'Uzuki', text: 'Hello! Are you the new producer? I am Shimamura Uzuki! I will do my best!', sprite: 'https://api.dicebear.com/7.x/notionists/svg?seed=Uzuki&backgroundColor=ffdfbf', position: 'center', expression: 'smile' },
+          { speaker: 'Producer', text: 'Nice to meet you, Uzuki. Let\'s work hard together.', sprite: null, position: 'center', expression: 'normal' },
+          { speaker: 'Uzuki', text: 'Yes! I\'m looking forward to it!', sprite: 'https://api.dicebear.com/7.x/notionists/svg?seed=Uzuki&backgroundColor=ffdfbf', position: 'center', expression: 'happy' }
+        ])
+      },
+      {
+        id: 'idol_rin_1',
+        title: 'Rin: First Encounter',
+        type: 'idol',
+        unlock_condition: 'card_1',
+        reward_type: 'jewels',
+        reward_amount: 25,
+        script: JSON.stringify([
+          { speaker: 'Rin', text: '...What? You want me to be an idol?', sprite: 'https://api.dicebear.com/7.x/notionists/svg?seed=Rin&backgroundColor=bfe6ff', position: 'center', expression: 'surprised' },
+          { speaker: 'Rin', text: 'I don\'t know... I\'m just helping out at my parents\' flower shop.', sprite: 'https://api.dicebear.com/7.x/notionists/svg?seed=Rin&backgroundColor=bfe6ff', position: 'center', expression: 'normal' },
+          { speaker: 'Producer', text: 'You have potential. Please, give it a try.', sprite: null, position: 'center', expression: 'normal' },
+          { speaker: 'Rin', text: '...Fine. But don\'t expect too much.', sprite: 'https://api.dicebear.com/7.x/notionists/svg?seed=Rin&backgroundColor=bfe6ff', position: 'center', expression: 'blush' }
+        ])
+      }
+    ];
+    for (const c of initialCommus) {
+      await db.run(`INSERT INTO commus (id, title, type, unlock_condition, reward_type, reward_amount, script) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [c.id, c.title, c.type, c.unlock_condition, c.reward_type, c.reward_amount, c.script]);
     }
   }
 
