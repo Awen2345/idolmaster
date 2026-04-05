@@ -1,13 +1,17 @@
 import express from "express";
 import cors from "cors";
+import { createServer } from "http";
 import apiRoutes from "./routes/api.js";
 import { setupViteMiddleware } from "./middleware/vite.js";
 import { setupDatabase } from "./db.js";
+import { setupSocket } from "./socket.js";
 
 const PORT = 3000;
 
 async function startServer() {
   const app = express();
+  const httpServer = createServer(app);
+  
   app.use(cors());
   app.use(express.json());
 
@@ -42,7 +46,10 @@ async function startServer() {
   // Vite middleware for development
   await setupViteMiddleware(app);
 
-  app.listen(PORT, "0.0.0.0", () => {
+  // Setup WebSocket
+  setupSocket(httpServer);
+
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }

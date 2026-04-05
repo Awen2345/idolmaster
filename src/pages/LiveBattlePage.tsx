@@ -1,63 +1,73 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Swords, Star, User, Shield, Zap, Menu, Home, RefreshCcw, Mic2, Bird, PlayCircle } from 'lucide-react';
+import { ChevronLeft, Swords, Star, User, Shield, Zap, Menu, Home, RefreshCcw, Mic2, Bird, PlayCircle, Users, Bot } from 'lucide-react';
 import { Card } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
+import { io, Socket } from 'socket.io-client';
 
 export function LiveBattlePage({ onNavigate, formation, userId }: { onNavigate: (page: string) => void, formation: (Card | null)[], userId: number }) {
-  const [battleState, setBattleState] = useState<'idle' | 'battling' | 'result'>('idle');
+  const [battleState, setBattleState] = useState<'idle' | 'searching' | 'battling' | 'result'>('idle');
   const [opponent, setOpponent] = useState<any>(null);
   const [result, setResult] = useState<any>(null);
   const [showPlayerBubble, setShowPlayerBubble] = useState(true);
   const [showOpponentBubble, setShowOpponentBubble] = useState(true);
+  const [mode, setMode] = useState<'bot' | 'multiplayer'>('bot');
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   const activeIdols = formation.filter(c => c !== null) as Card[];
   const playerLeader = activeIdols[0] || null;
 
-  // Mock opponent formation
-  const opponentFormation = [
-    { id: 101, name: "Chihaya", img: "https://api.dicebear.com/7.x/notionists/svg?seed=Chihaya&backgroundColor=bfe6ff", rarity: "SR+" },
-    { id: 102, name: "Haruka", img: "https://api.dicebear.com/7.x/notionists/svg?seed=Haruka&backgroundColor=ffdfbf", rarity: "SR+" },
-    { id: 103, name: "Miki", img: "https://api.dicebear.com/7.x/notionists/svg?seed=Miki&backgroundColor=d1ffbd", rarity: "SR+" },
-    { id: 104, name: "Iori", img: "https://api.dicebear.com/7.x/notionists/svg?seed=Iori&backgroundColor=ffd5dc", rarity: "SR+" },
-    { id: 105, name: "Yayoi", img: "https://api.dicebear.com/7.x/notionists/svg?seed=Yayoi&backgroundColor=ffffbf", rarity: "SR+" },
-  ];
-
   useEffect(() => {
-    // Generate random opponent stats
-    setOpponent({
-      name: "[Memorial Party] Uzuki Shimamura+",
-      level: 45,
-      atk: 25400,
-      def: 21000,
-      quote: "Everyone, let's head to this stage!",
-      avatar: "https://api.dicebear.com/7.x/notionists/svg?seed=Uzuki&backgroundColor=ffdfbf"
+    const newSocket = io();
+    setSocket(newSocket);
+
+    newSocket.on("match_found", (data) => {
+      setOpponent(data.opponent);
+      setBattleState('battling');
+      
+      // Calculate stats and result after a short delay for animation
+      setTimeout(async () => {
+        const playerAtk = activeIdols.reduce((sum, c) => sum + c.atk, 0);
+        const isWin = playerAtk > (data.opponent.def || 0);
+
+        const fansGained = isWin ? 250 : 50;
+        const moneyGained = isWin ? 1200 : 300;
+
+        try {
+          await fetch(`/api/live/${userId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isWin, fansGained, moneyGained })
+          });
+        } catch (e) {
+          console.error("Failed to save battle result", e);
+        }
+
+        setResult({ isWin, fansGained, moneyGained });
+        setBattleState('result');
+      }, 2500);
     });
-  }, []);
 
-  const handleBattle = async () => {
-    setBattleState('battling');
+    return () => {
+      newSocket.close();
+    };
+  }, [activeIdols, userId]);
+
+  const handleBattle = () => {
+    if (!socket || activeIdols.length === 0) return;
+    setBattleState('searching');
+    setOpponent(null);
+    setResult(null);
     
-    // Calculate stats
-    const playerAtk = activeIdols.reduce((sum, c) => sum + c.atk, 0);
-    const isWin = playerAtk > (opponent?.def || 0);
+    const totalAtk = activeIdols.reduce((sum, c) => sum + c.atk, 0);
+    const totalDef = activeIdols.reduce((sum, c) => sum + c.def, 0);
 
-    setTimeout(async () => {
-      const fansGained = isWin ? 250 : 50;
-      const moneyGained = isWin ? 1200 : 300;
-
-      try {
-        await fetch(`/api/live/${userId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ isWin, fansGained, moneyGained })
-        });
-      } catch (e) {
-        console.error("Failed to save battle result", e);
-      }
-
-      setResult({ isWin, fansGained, moneyGained });
-      setBattleState('result');
-    }, 2000);
+    socket.emit("find_match", {
+      userId,
+      formation: activeIdols,
+      totalAtk,
+      totalDef,
+      mode
+    });
   };
 
   const CardGrid = ({ cards, isOpponent = false }: { cards: any[], isOpponent?: boolean }) => (
@@ -116,7 +126,7 @@ export function LiveBattlePage({ onNavigate, formation, userId }: { onNavigate: 
 
       {/* Opponent Section */}
       <div className="relative flex-1 flex flex-col">
-        <CardGrid cards={opponentFormation} isOpponent />
+        <CardGrid cards={opponent ? opponent.formation : Array(5).fill(null)} isOpponent />
         <div className="flex-1 relative">
           <AnimatePresence>
             {showOpponentBubble && opponent && (
@@ -130,9 +140,26 @@ export function LiveBattlePage({ onNavigate, formation, userId }: { onNavigate: 
         </div>
       </div>
 
-      {/* Center PUSH Button */}
-      <div className="relative h-20 z-40 flex items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-r from-pink-500 via-white to-pink-500 h-12 my-auto shadow-[0_0_20px_rgba(236,72,153,0.5)] border-y-2 border-pink-300 flex items-center justify-center">
+      {/* Center PUSH Button & Mode Selector */}
+      <div className="relative h-28 z-40 flex flex-col items-center justify-center">
+        
+        {/* Mode Selector */}
+        <div className="absolute top-0 flex gap-2 bg-black/50 p-1 rounded-full border border-slate-600 backdrop-blur-sm z-20">
+          <button 
+            onClick={() => setMode('bot')}
+            className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold transition-colors ${mode === 'bot' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            <Bot size={12} /> BOT
+          </button>
+          <button 
+            onClick={() => setMode('multiplayer')}
+            className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold transition-colors ${mode === 'multiplayer' ? 'bg-pink-600 text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            <Users size={12} /> MULTIPLAYER
+          </button>
+        </div>
+
+        <div className="absolute inset-0 top-6 bg-gradient-to-r from-pink-500 via-white to-pink-500 h-12 my-auto shadow-[0_0_20px_rgba(236,72,153,0.5)] border-y-2 border-pink-300 flex items-center justify-center">
           <div className="absolute left-4 border-l-8 border-l-pink-700 border-y-8 border-y-transparent"></div>
           <div className="absolute right-4 flex gap-1">
             <Star size={16} className="text-pink-700 fill-current" />
@@ -143,10 +170,10 @@ export function LiveBattlePage({ onNavigate, formation, userId }: { onNavigate: 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleBattle}
-            disabled={battleState !== 'idle'}
+            disabled={battleState !== 'idle' || activeIdols.length === 0}
             className="relative z-10 text-pink-600 font-black italic text-3xl tracking-[0.2em] drop-shadow-sm disabled:opacity-50"
           >
-            PUSH
+            {battleState === 'searching' ? 'SEARCHING...' : 'PUSH'}
           </motion.button>
         </div>
       </div>
@@ -222,7 +249,11 @@ export function LiveBattlePage({ onNavigate, formation, userId }: { onNavigate: 
                 </div>
 
                 <button 
-                  onClick={() => onNavigate('main')}
+                  onClick={() => {
+                    setBattleState('idle');
+                    setOpponent(null);
+                    setResult(null);
+                  }}
                   className="w-full bg-gradient-to-r from-pink-500 to-rose-600 text-white font-bold py-3 rounded-full shadow-lg hover:brightness-110 active:scale-95 transition-all"
                 >
                   OK
