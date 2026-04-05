@@ -1,249 +1,261 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Swords, Star, User, Shield, Zap } from 'lucide-react';
+import { ChevronLeft, Swords, Star, User, Shield, Zap, Menu, Home, RefreshCcw, Mic2, Bird, PlayCircle } from 'lucide-react';
 import { Card } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function LiveBattlePage({ onNavigate, formation, userId }: { onNavigate: (page: string) => void, formation: (Card | null)[], userId: number }) {
-  const [battleState, setBattleState] = useState<'idle' | 'searching' | 'battling' | 'result'>('idle');
+  const [battleState, setBattleState] = useState<'idle' | 'battling' | 'result'>('idle');
   const [opponent, setOpponent] = useState<any>(null);
-  const [battleLog, setBattleLog] = useState<string[]>([]);
   const [result, setResult] = useState<any>(null);
+  const [showPlayerBubble, setShowPlayerBubble] = useState(true);
+  const [showOpponentBubble, setShowOpponentBubble] = useState(true);
 
   const activeIdols = formation.filter(c => c !== null) as Card[];
+  const playerLeader = activeIdols[0] || null;
 
-  // Calculate base stats
-  const baseAtk = activeIdols.reduce((sum, card) => sum + card.atk, 0);
-  const baseDef = activeIdols.reduce((sum, card) => sum + card.def, 0);
+  // Mock opponent formation
+  const opponentFormation = [
+    { id: 101, name: "Chihaya", img: "https://api.dicebear.com/7.x/notionists/svg?seed=Chihaya&backgroundColor=bfe6ff", rarity: "SR+" },
+    { id: 102, name: "Haruka", img: "https://api.dicebear.com/7.x/notionists/svg?seed=Haruka&backgroundColor=ffdfbf", rarity: "SR+" },
+    { id: 103, name: "Miki", img: "https://api.dicebear.com/7.x/notionists/svg?seed=Miki&backgroundColor=d1ffbd", rarity: "SR+" },
+    { id: 104, name: "Iori", img: "https://api.dicebear.com/7.x/notionists/svg?seed=Iori&backgroundColor=ffd5dc", rarity: "SR+" },
+    { id: 105, name: "Yayoi", img: "https://api.dicebear.com/7.x/notionists/svg?seed=Yayoi&backgroundColor=ffffbf", rarity: "SR+" },
+  ];
 
-  // Apply Live Skills
-  let totalAtk = baseAtk;
-  let totalDef = baseDef;
-  const activeSkills: string[] = [];
+  useEffect(() => {
+    // Generate random opponent stats
+    setOpponent({
+      name: "[Memorial Party] Uzuki Shimamura+",
+      level: 45,
+      atk: 25400,
+      def: 21000,
+      quote: "Everyone, let's head to this stage!",
+      avatar: "https://api.dicebear.com/7.x/notionists/svg?seed=Uzuki&backgroundColor=ffdfbf"
+    });
+  }, []);
 
-  activeIdols.forEach(card => {
-    if (card.liveSkill) {
-      const { type, value, description } = card.liveSkill;
-      activeSkills.push(`[${card.name}] ${description}`);
-      
-      switch (type) {
-        case 'atk_boost':
-          totalAtk += Math.floor(baseAtk * (value / 100));
-          break;
-        case 'def_boost':
-          totalDef += Math.floor(baseDef * (value / 100));
-          break;
-        case 'atk_def_boost':
-          totalAtk += Math.floor(baseAtk * (value / 100));
-          totalDef += Math.floor(baseDef * (value / 100));
-          break;
-      }
-    }
-  });
-
-  const handleFindOpponent = () => {
-    setBattleState('searching');
-    setTimeout(() => {
-      // Mock opponent generation
-      const oppAtk = Math.floor(totalAtk * (0.8 + Math.random() * 0.4));
-      const oppDef = Math.floor(totalDef * (0.8 + Math.random() * 0.4));
-      setOpponent({
-        name: "Rival Producer",
-        level: Math.floor(Math.random() * 20) + 10,
-        atk: oppAtk,
-        def: oppDef,
-        avatar: `https://picsum.photos/seed/rival${Math.random()}/100/100`
-      });
-      setBattleState('battling');
-      simulateBattle(oppAtk, oppDef);
-    }, 1500);
-  };
-
-  const simulateBattle = (oppAtk: number, oppDef: number) => {
-    const logs: string[] = [];
-    logs.push("Battle Started!");
+  const handleBattle = async () => {
+    setBattleState('battling');
     
-    if (activeSkills.length > 0) {
-      logs.push("Live Skills Activated!");
-      activeSkills.forEach(s => logs.push(s));
-    }
+    // Calculate stats
+    const playerAtk = activeIdols.reduce((sum, c) => sum + c.atk, 0);
+    const isWin = playerAtk > (opponent?.def || 0);
 
-    setTimeout(() => {
-      logs.push(`Your ATK (${totalAtk}) vs Opponent DEF (${oppDef})`);
-      const myDamage = Math.max(10, totalAtk - oppDef * 0.8);
-      
-      logs.push(`Opponent ATK (${oppAtk}) vs Your DEF (${totalDef})`);
-      const oppDamage = Math.max(10, oppAtk - totalDef * 0.8);
+    setTimeout(async () => {
+      const fansGained = isWin ? 250 : 50;
+      const moneyGained = isWin ? 1200 : 300;
 
-      setBattleLog(logs);
-
-      setTimeout(async () => {
-        const isWin = myDamage > oppDamage;
-        logs.push(isWin ? "You won the Live Battle!" : "You lost the Live Battle...");
-        setBattleLog([...logs]);
-        
-        const fansGained = isWin ? 150 : 20;
-        const moneyGained = isWin ? 500 : 100;
-
-        try {
-          await fetch(`/api/live/${userId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ isWin, fansGained, moneyGained })
-          });
-        } catch (e) {
-          console.error("Failed to save battle result", e);
-        }
-
-        setResult({
-          isWin,
-          fansGained,
-          moneyGained
+      try {
+        await fetch(`/api/live/${userId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isWin, fansGained, moneyGained })
         });
-        setBattleState('result');
-      }, 1500);
-    }, 1500);
+      } catch (e) {
+        console.error("Failed to save battle result", e);
+      }
+
+      setResult({ isWin, fansGained, moneyGained });
+      setBattleState('result');
+    }, 2000);
   };
 
-  return (
-    <div className="relative w-full max-w-md mx-auto h-screen bg-slate-900 overflow-hidden flex flex-col font-sans text-slate-100">
-      {/* Header */}
-      <header className="flex items-center justify-between bg-gradient-to-b from-blue-600 to-indigo-800 p-3 border-b-2 border-blue-400 shadow-md z-10">
-        <button onClick={() => onNavigate('main')} className="p-1 bg-black/20 rounded-full hover:bg-black/40 transition-colors">
-          <ChevronLeft size={24} className="text-white" />
-        </button>
-        <h1 className="text-lg font-black text-white drop-shadow-md italic tracking-wider flex items-center gap-2">
-          <Swords size={20} />
-          LIVE BATTLE
-        </h1>
-        <div className="w-8"></div>
-      </header>
-
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-        
-        {/* Player Team Stats */}
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow-inner">
-          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 text-center border-b border-slate-700 pb-2">Your Unit</h2>
-          
-          <div className="flex justify-center gap-2 mb-4">
-            {formation.map((card, idx) => (
-              <div key={idx} className="w-12 h-12 rounded bg-slate-900 border border-slate-600 overflow-hidden">
-                {card ? <img src={card.img} alt={card.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" /> : <User size={20} className="m-auto mt-3 text-slate-700" />}
+  const CardGrid = ({ cards, isOpponent = false }: { cards: any[], isOpponent?: boolean }) => (
+    <div className="grid grid-cols-5 gap-1 p-1 bg-black/40">
+      {cards.map((card, i) => (
+        <div key={i} className={`aspect-[3/4] bg-slate-800 border ${isOpponent ? 'border-red-900/50' : 'border-blue-900/50'} overflow-hidden relative group`}>
+          {card ? (
+            <>
+              <img src={card.img} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[8px] text-center py-0.5 font-bold truncate">
+                {card.rarity || 'R'}
               </div>
-            ))}
-          </div>
-
-          <div className="flex justify-around bg-slate-900 p-2 rounded-lg">
-            <div className="text-center">
-              <div className="text-[10px] text-red-400 font-bold flex items-center justify-center gap-1"><Swords size={12}/> TOTAL ATK</div>
-              <div className="text-lg font-black text-red-500">{totalAtk.toLocaleString()}</div>
-              {totalAtk > baseAtk && <div className="text-[10px] text-green-400">(+{totalAtk - baseAtk})</div>}
-            </div>
-            <div className="text-center">
-              <div className="text-[10px] text-blue-400 font-bold flex items-center justify-center gap-1"><Shield size={12}/> TOTAL DEF</div>
-              <div className="text-lg font-black text-blue-500">{totalDef.toLocaleString()}</div>
-              {totalDef > baseDef && <div className="text-[10px] text-green-400">(+{totalDef - baseDef})</div>}
-            </div>
-          </div>
-
-          {activeSkills.length > 0 && (
-            <div className="mt-3">
-              <div className="text-[10px] text-yellow-400 font-bold mb-1 flex items-center gap-1"><Zap size={12}/> Active Live Skills</div>
-              <div className="space-y-1">
-                {activeSkills.map((skill, i) => (
-                  <div key={i} className="text-[9px] bg-yellow-900/30 text-yellow-200 px-2 py-1 rounded border border-yellow-700/50 truncate">
-                    {skill}
-                  </div>
-                ))}
-              </div>
+            </>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-slate-700">
+              <User size={16} />
             </div>
           )}
         </div>
+      ))}
+    </div>
+  );
 
-        {/* Battle Arena */}
-        <div className="flex-1 bg-slate-800 rounded-xl border border-slate-700 shadow-inner p-4 flex flex-col items-center justify-center relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/stage/400/400')] bg-cover bg-center opacity-20 mix-blend-luminosity"></div>
-          
-          <AnimatePresence mode="wait">
-            {battleState === 'idle' && (
-              <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative z-10 text-center">
-                <div className="text-slate-400 mb-4 font-bold">Ready for a Live Battle?</div>
-                <button 
-                  onClick={handleFindOpponent}
-                  disabled={activeIdols.length === 0}
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black italic tracking-wider px-8 py-3 rounded-full shadow-lg hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  FIND OPPONENT
-                </button>
-                {activeIdols.length === 0 && <div className="text-red-400 text-xs mt-2">Assign idols to your formation first!</div>}
-              </motion.div>
-            )}
+  const SpeechBubble = ({ name, text, avatar, isBottom = false }: { name: string, text: string, avatar: string, isBottom?: boolean }) => (
+    <motion.div 
+      initial={{ opacity: 0, x: isBottom ? -20 : 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className={`absolute ${isBottom ? 'bottom-4 left-4' : 'top-4 right-4'} z-30 flex ${isBottom ? 'flex-row' : 'flex-row-reverse'} items-center gap-2 max-w-[85%]`}
+    >
+      {/* Avatar with Star Frame */}
+      <div className="relative shrink-0">
+        <div className="w-16 h-16 bg-white rounded-full border-2 border-pink-400 overflow-hidden shadow-lg relative z-10">
+          <img src={avatar} alt="" className="w-full h-full object-cover" />
+        </div>
+        <Star className="absolute -top-2 -left-2 text-yellow-400 fill-current z-20 drop-shadow-md" size={24} />
+        <Star className="absolute -bottom-1 -right-1 text-pink-400 fill-current z-20 drop-shadow-md" size={20} />
+      </div>
 
-            {battleState === 'searching' && (
-              <motion.div key="searching" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative z-10 text-center">
-                <div className="animate-spin mb-4 inline-block">
-                  <Swords size={48} className="text-blue-500" />
-                </div>
-                <div className="text-blue-300 font-bold animate-pulse">Searching for Rival...</div>
-              </motion.div>
-            )}
+      {/* Bubble */}
+      <div className="flex flex-col">
+        <div className={`bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-md relative border border-slate-200`}>
+          <p className="text-slate-800 text-xs font-bold leading-tight">{text}</p>
+          <div className={`absolute top-1/2 -translate-y-1/2 ${isBottom ? '-left-2 border-r-8 border-r-white/90' : '-right-2 border-l-8 border-l-white/90'} border-t-8 border-t-transparent border-b-8 border-b-transparent`}></div>
+        </div>
+        <div className={`mt-1 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded self-${isBottom ? 'start' : 'end'} border border-white/20`}>
+          {name}
+        </div>
+      </div>
+    </motion.div>
+  );
 
-            {(battleState === 'battling' || battleState === 'result') && opponent && (
-              <motion.div key="battling" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="relative z-10 w-full flex flex-col h-full">
-                
-                {/* Opponent Info */}
-                <div className="flex items-center gap-3 bg-red-900/40 p-2 rounded-lg border border-red-500/50 mb-4">
-                  <img src={opponent.avatar} className="w-12 h-12 rounded-full border-2 border-red-500" alt="Rival" />
-                  <div className="flex-1">
-                    <div className="text-red-300 text-xs font-bold">Lv. {opponent.level}</div>
-                    <div className="text-white font-bold">{opponent.name}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[10px] text-red-400 font-bold">ATK {opponent.atk}</div>
-                    <div className="text-[10px] text-blue-400 font-bold">DEF {opponent.def}</div>
-                  </div>
-                </div>
+  return (
+    <div className="relative w-full max-w-md mx-auto h-screen bg-slate-950 overflow-hidden flex flex-col font-sans text-slate-100">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 pointer-events-none"></div>
 
-                {/* Battle Log */}
-                <div className="flex-1 bg-black/50 rounded-lg p-3 overflow-y-auto border border-slate-600 font-mono text-xs space-y-2">
-                  {battleLog.map((log, i) => (
-                    <motion.div 
-                      key={i} 
-                      initial={{ opacity: 0, x: -10 }} 
-                      animate={{ opacity: 1, x: 0 }}
-                      className={`${log.includes('won') ? 'text-green-400 font-bold' : log.includes('lost') ? 'text-red-400 font-bold' : log.includes('Skill') ? 'text-yellow-300' : 'text-slate-300'}`}
-                    >
-                      &gt; {log}
-                    </motion.div>
-                  ))}
-                </div>
-
-                {/* Result Overlay */}
-                {battleState === 'result' && result && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    className={`mt-4 p-4 rounded-xl border-2 text-center ${result.isWin ? 'bg-green-900/80 border-green-500' : 'bg-slate-800/80 border-slate-500'}`}
-                  >
-                    <h3 className={`text-2xl font-black italic tracking-wider mb-2 ${result.isWin ? 'text-green-400' : 'text-slate-400'}`}>
-                      {result.isWin ? 'VICTORY!' : 'DEFEAT'}
-                    </h3>
-                    <div className="flex justify-center gap-4 text-sm font-bold">
-                      <div className="text-pink-300">Fans +{result.fansGained}</div>
-                      <div className="text-yellow-300">Money +{result.moneyGained}</div>
-                    </div>
-                    <button 
-                      onClick={() => { setBattleState('idle'); setBattleLog([]); setOpponent(null); setResult(null); }}
-                      className="mt-4 bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-full text-sm font-bold transition-colors"
-                    >
-                      Next Battle
-                    </button>
-                  </motion.div>
-                )}
-              </motion.div>
+      {/* Opponent Section */}
+      <div className="relative flex-1 flex flex-col">
+        <CardGrid cards={opponentFormation} isOpponent />
+        <div className="flex-1 relative">
+          <AnimatePresence>
+            {showOpponentBubble && opponent && (
+              <SpeechBubble 
+                name={opponent.name} 
+                text={opponent.quote} 
+                avatar={opponent.avatar} 
+              />
             )}
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Center PUSH Button */}
+      <div className="relative h-20 z-40 flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-r from-pink-500 via-white to-pink-500 h-12 my-auto shadow-[0_0_20px_rgba(236,72,153,0.5)] border-y-2 border-pink-300 flex items-center justify-center">
+          <div className="absolute left-4 border-l-8 border-l-pink-700 border-y-8 border-y-transparent"></div>
+          <div className="absolute right-4 flex gap-1">
+            <Star size={16} className="text-pink-700 fill-current" />
+            <Star size={12} className="text-pink-700 fill-current" />
+          </div>
+          
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleBattle}
+            disabled={battleState !== 'idle'}
+            className="relative z-10 text-pink-600 font-black italic text-3xl tracking-[0.2em] drop-shadow-sm disabled:opacity-50"
+          >
+            PUSH
+          </motion.button>
+        </div>
+      </div>
+
+      {/* Player Section */}
+      <div className="relative flex-1 flex flex-col-reverse">
+        <CardGrid cards={formation} />
+        <div className="flex-1 relative">
+          <AnimatePresence>
+            {showPlayerBubble && playerLeader && (
+              <SpeechBubble 
+                isBottom
+                name={playerLeader.name} 
+                text="My everything, into this song...!" 
+                avatar={playerLeader.img} 
+              />
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Battle Animation Overlay */}
+      <AnimatePresence>
+        {battleState === 'battling' && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-white/20 backdrop-blur-sm flex items-center justify-center"
+          >
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.2, 1],
+                rotate: [0, 5, -5, 0]
+              }}
+              transition={{ repeat: Infinity, duration: 0.5 }}
+              className="text-pink-600 font-black text-6xl italic drop-shadow-[0_0_10px_rgba(255,255,255,1)]"
+            >
+              LIVE!!
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Result Modal */}
+      <AnimatePresence>
+        {battleState === 'result' && result && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 z-[60] bg-black/80 flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.8, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className={`w-full max-w-xs bg-gradient-to-b ${result.isWin ? 'from-blue-600 to-indigo-900' : 'from-slate-700 to-slate-900'} rounded-2xl border-4 border-yellow-400 p-6 text-center shadow-2xl relative overflow-hidden`}
+            >
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div>
+              <div className="relative z-10">
+                <h2 className="text-4xl font-black text-white italic tracking-widest mb-4 drop-shadow-md">
+                  {result.isWin ? 'VICTORY' : 'DEFEAT'}
+                </h2>
+                
+                <div className="bg-black/40 rounded-xl p-4 mb-6 border border-white/20">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-slate-300 text-sm">Fans</span>
+                    <span className="text-pink-400 font-bold">+{result.fansGained}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 text-sm">Money</span>
+                    <span className="text-yellow-400 font-bold">+{result.moneyGained}</span>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => onNavigate('main')}
+                  className="w-full bg-gradient-to-r from-pink-500 to-rose-600 text-white font-bold py-3 rounded-full shadow-lg hover:brightness-110 active:scale-95 transition-all"
+                >
+                  OK
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom Navigation Bar */}
+      <nav className="h-14 bg-gradient-to-b from-blue-800 to-blue-950 border-t-2 border-blue-400 flex items-stretch z-40">
+        <button onClick={() => onNavigate('main')} className="flex-1 flex flex-col items-center justify-center hover:bg-white/10 transition-colors border-r border-blue-400/30">
+          <ChevronLeft size={20} className="text-blue-200" />
+          <span className="text-[8px] font-bold text-blue-200 uppercase mt-0.5">Back</span>
+        </button>
+        <button className="flex-1 flex flex-col items-center justify-center hover:bg-white/10 transition-colors border-r border-blue-400/30">
+          <PlayCircle size={20} className="text-blue-200" />
+          <span className="text-[8px] font-bold text-blue-200 uppercase mt-0.5">Auto</span>
+        </button>
+        <button onClick={() => onNavigate('main')} className="flex-1 flex flex-col items-center justify-center hover:bg-white/10 transition-colors border-r border-blue-400/30">
+          <Home size={20} className="text-blue-200" />
+          <span className="text-[8px] font-bold text-blue-200 uppercase mt-0.5">My Studio</span>
+        </button>
+        <button className="flex-1 flex flex-col items-center justify-center hover:bg-white/10 transition-colors border-r border-blue-400/30">
+          <RefreshCcw size={20} className="text-blue-200" />
+          <span className="text-[8px] font-bold text-blue-200 uppercase mt-0.5">Reload</span>
+        </button>
+        <button className="flex-1 flex flex-col items-center justify-center hover:bg-white/10 transition-colors">
+          <Menu size={20} className="text-blue-200" />
+          <span className="text-[8px] font-bold text-blue-200 uppercase mt-0.5">Menu</span>
+        </button>
+      </nav>
     </div>
   );
 }
