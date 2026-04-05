@@ -20,7 +20,15 @@ export function LiveBattlePage({ onNavigate, formation, userId }: { onNavigate: 
     const newSocket = io();
     setSocket(newSocket);
 
-    newSocket.on("match_found", (data) => {
+    return () => {
+      newSocket.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const onMatchFound = (data: any) => {
       setOpponent(data.opponent);
       setBattleState('battling');
       
@@ -45,12 +53,14 @@ export function LiveBattlePage({ onNavigate, formation, userId }: { onNavigate: 
         setResult({ isWin, fansGained, moneyGained });
         setBattleState('result');
       }, 2500);
-    });
+    };
+
+    socket.on("match_found", onMatchFound);
 
     return () => {
-      newSocket.close();
+      socket.off("match_found", onMatchFound);
     };
-  }, [activeIdols, userId]);
+  }, [socket, activeIdols, userId]);
 
   const handleBattle = () => {
     if (!socket || activeIdols.length === 0) return;
