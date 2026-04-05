@@ -17,10 +17,17 @@ export function LiveBattlePage({ onNavigate, formation, userId }: { onNavigate: 
   const playerLeader = activeIdols[0] || null;
 
   useEffect(() => {
-    const newSocket = io();
+    console.log("Initializing socket connection...");
+    const newSocket = io({ transports: ['websocket'] });
+    
+    newSocket.on('connect', () => console.log('Socket connected to server'));
+    newSocket.on('disconnect', () => console.log('Socket disconnected from server'));
+    newSocket.on('connect_error', (err) => console.error('Socket connect error:', err));
+
     setSocket(newSocket);
 
     return () => {
+      console.log("Cleaning up socket connection...");
       newSocket.close();
     };
   }, []);
@@ -29,6 +36,7 @@ export function LiveBattlePage({ onNavigate, formation, userId }: { onNavigate: 
     if (!socket) return;
 
     const onMatchFound = (data: any) => {
+      console.log("Match found!", data);
       setOpponent(data.opponent);
       setBattleState('battling');
       
@@ -63,6 +71,7 @@ export function LiveBattlePage({ onNavigate, formation, userId }: { onNavigate: 
   }, [socket, activeIdols, userId]);
 
   const handleBattle = () => {
+    console.log("PUSH clicked. Socket:", socket?.connected, "Mode:", mode);
     if (!socket || activeIdols.length === 0) return;
     setBattleState('searching');
     setOpponent(null);
@@ -71,6 +80,7 @@ export function LiveBattlePage({ onNavigate, formation, userId }: { onNavigate: 
     const totalAtk = activeIdols.reduce((sum, c) => sum + c.atk, 0);
     const totalDef = activeIdols.reduce((sum, c) => sum + c.def, 0);
 
+    console.log("Emitting find_match:", { userId, totalAtk, totalDef, mode });
     socket.emit("find_match", {
       userId,
       formation: activeIdols,
