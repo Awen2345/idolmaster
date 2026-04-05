@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Star, Music, Gift, Users, Lightbulb, 
-  Menu, Home, Bird, RefreshCcw, Mic2, Coins, Calendar
+  Menu, Home, Bird, RefreshCcw, Mic2, Coins, Calendar, PlayCircle
 } from 'lucide-react';
 import { NavBtn, StatusBox, StatusBar } from './Shared';
 import { MenuOverlay } from './MenuOverlay';
@@ -15,6 +15,16 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
   const [loginBonus, setLoginBonus] = useState<any>(null);
+  const [voiceData, setVoiceData] = useState<any[]>([]);
+  const [currentVoice, setCurrentVoice] = useState<{text: string, file: string} | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    fetch('/data/cards_voice.json')
+      .then(res => res.json())
+      .then(data => setVoiceData(data))
+      .catch(err => console.error("Failed to load voice data", err));
+  }, []);
 
   useEffect(() => {
     if (userId) {
@@ -29,6 +39,28 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
         .catch(err => console.error("Failed to claim login bonus", err));
     }
   }, [userId]);
+
+  const handleCardClick = (index: number, card: Card) => {
+    if (selectedCard === index) {
+      setSelectedCard(null);
+      setCurrentVoice(null);
+    } else {
+      setSelectedCard(index);
+      const cardVoiceData = voiceData.find(v => v.id === card.id);
+      if (cardVoiceData && cardVoiceData.voice_lines.length > 0) {
+        const randomLine = cardVoiceData.voice_lines[Math.floor(Math.random() * cardVoiceData.voice_lines.length)];
+        setCurrentVoice(randomLine);
+        
+        // Auto play voice
+        if (audioRef.current) {
+          audioRef.current.src = randomLine.file;
+          audioRef.current.play().catch(e => console.log("Audio play prevented:", e));
+        }
+      } else {
+        setCurrentVoice({ text: `Hello, I'm ${card.name}!`, file: '' });
+      }
+    }
+  };
 
   // Filter out nulls to display only assigned cards
   const cards = formation.filter((c): c is Card => c !== null);
@@ -68,12 +100,27 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
 
         {/* Speech Bubble Area */}
         <div className="p-3 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-cyan-100 relative z-10 shadow-inner flex gap-2">
-          <div className="bg-white rounded-xl border-4 border-orange-400 p-3 relative shadow-md flex-1">
-            <p className="font-bold text-gray-800 text-sm">Any pose is totally OK!</p>
+          <div className="bg-white rounded-xl border-4 border-orange-400 p-3 relative shadow-md flex-1 flex items-center justify-between">
+            <p className="font-bold text-gray-800 text-sm flex-1">
+              {currentVoice ? currentVoice.text : "Tap a card to hear my voice!"}
+            </p>
+            {currentVoice && currentVoice.file && (
+              <button 
+                onClick={() => {
+                  if (audioRef.current) {
+                    audioRef.current.currentTime = 0;
+                    audioRef.current.play().catch(e => console.log("Audio play prevented:", e));
+                  }
+                }}
+                className="ml-2 text-orange-500 hover:text-orange-600 transition-colors"
+              >
+                <PlayCircle size={28} />
+              </button>
+            )}
             <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-orange-400"></div>
             <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-6 border-r-6 border-t-6 border-transparent border-t-white"></div>
-            <Star className="absolute right-2 bottom-2 text-yellow-400" size={16} fill="currentColor" />
-            <Star className="absolute right-6 bottom-4 text-yellow-300" size={12} fill="currentColor" />
+            <Star className="absolute right-2 bottom-2 text-yellow-400 opacity-50" size={16} fill="currentColor" />
+            <Star className="absolute right-6 bottom-4 text-yellow-300 opacity-50" size={12} fill="currentColor" />
           </div>
           
           <div className="flex flex-col gap-1 w-20">
@@ -98,7 +145,7 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
               <motion.div
                 key={`${card.id}-${index}`}
                 layout
-                onClick={() => setSelectedCard(isSelected ? null : index)}
+                onClick={() => handleCardClick(index, card)}
                 className="relative cursor-pointer overflow-hidden border-r border-yellow-500/30 last:border-r-0 flex-shrink-0"
                 initial={false}
                 animate={{
@@ -201,6 +248,9 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
             onRefresh();
           }}
         />
+
+        {/* Hidden Audio Element */}
+        <audio ref={audioRef} />
 
         {/* Login Bonus Popup */}
         <AnimatePresence>

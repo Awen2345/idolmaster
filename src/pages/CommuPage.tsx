@@ -54,7 +54,7 @@ export function CommuPage({ onNavigate }: { onNavigate: (page: string, params?: 
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 flex flex-col items-center justify-center p-2 rounded-lg transition-all min-w-[80px] ${
               activeTab === tab.id 
-                ? \`bg-gradient-to-b \${tab.color} shadow-inner border border-white/30\` 
+                ? `bg-gradient-to-b ${tab.color} shadow-inner border border-white/30` 
                 : 'bg-slate-900 text-slate-400 border border-slate-700 hover:bg-slate-700'
             }`}
           >

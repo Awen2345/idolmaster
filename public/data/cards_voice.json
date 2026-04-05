@@ -1,0 +1,90 @@
+[
+  {
+    "id": 1,
+    "name": "SHIBUYA RIN",
+    "voice_lines": [
+      { "text": "Producer, let's do our best today.", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" },
+      { "text": "I'll show you what I can do.", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "SHIMAMURA UZUKI",
+    "voice_lines": [
+      { "text": "I'll do my very best! Ganbarimasu!", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" },
+      { "text": "Smile! That's the most important thing.", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "HONDA MIO",
+    "voice_lines": [
+      { "text": "Yahoo! Let's have some fun!", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" },
+      { "text": "Leave it to me, Producer!", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "RIN SHIBUYA",
+    "voice_lines": [
+      { "text": "Are you watching, Producer?", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" }
+    ]
+  },
+  {
+    "id": 11,
+    "name": "UZUKI SHIMAMURA",
+    "voice_lines": [
+      { "text": "I'm practicing my smile!", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" }
+    ]
+  },
+  {
+    "id": 12,
+    "name": "MIO HONDA",
+    "voice_lines": [
+      { "text": "Mitsuboshi! Here we go!", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" }
+    ]
+  },
+  {
+    "id": 13,
+    "name": "KAEDE TAKAGAKI",
+    "voice_lines": [
+      { "text": "Fufufu... A little pun for you.", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" },
+      { "text": "Let's share a drink later.", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" }
+    ]
+  },
+  {
+    "id": 14,
+    "name": "MIKA JOUGASAKI",
+    "voice_lines": [
+      { "text": "Look at my new nails!", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" }
+    ]
+  },
+  {
+    "id": 15,
+    "name": "RIKA JOUGASAKI",
+    "voice_lines": [
+      { "text": "Producer-kun! Play with me!", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" }
+    ]
+  },
+  {
+    "id": 20,
+    "name": "NORMAL IDOL A",
+    "voice_lines": [
+      { "text": "Hello there!", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" }
+    ]
+  },
+  {
+    "id": 21,
+    "name": "NORMAL IDOL B",
+    "voice_lines": [
+      { "text": "Nice to meet you.", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" }
+    ]
+  },
+  {
+    "id": 22,
+    "name": "NORMAL IDOL C",
+    "voice_lines": [
+      { "text": "Let's work hard.", "file": "https://actions.google.com/sounds/v1/water/water_drop.ogg" }
+    ]
+  }
+]

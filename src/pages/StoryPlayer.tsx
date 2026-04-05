@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, SkipForward, X, FastForward } from 'lucide-react';
+import { ChevronRight, SkipForward, X, FastForward, Star, PlayCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 type StoryLine = {
@@ -59,11 +59,11 @@ export function StoryPlayer({ onNavigate, episodeId }: { onNavigate: (page: stri
   const getSpriteUrl = (character: string, expression: string = 'neutral') => {
     // Using picsum with a specific seed to simulate a character sprite
     // In a real app, these would be actual transparent PNGs
-    return \`https://picsum.photos/seed/\${character}_\${expression}/400/800\`;
+    return `https://picsum.photos/seed/${character}_${expression}/400/800`;
   };
 
   const getBgUrl = (bg: string) => {
-    return \`https://picsum.photos/seed/\${bg}/600/800\`;
+    return `https://picsum.photos/seed/${bg}/600/800`;
   };
 
   if (isFinished) {
@@ -103,7 +103,7 @@ export function StoryPlayer({ onNavigate, episodeId }: { onNavigate: (page: stri
         <div className="flex gap-2">
           <button 
             onClick={() => setIsAuto(!isAuto)} 
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border \${isAuto ? 'bg-pink-600 border-pink-400 text-white' : 'bg-black/50 border-white/20 text-slate-300'}`}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border ${isAuto ? 'bg-pink-600 border-pink-400 text-white' : 'bg-black/50 border-white/20 text-slate-300'}`}
           >
             <PlayCircle size={14} /> AUTO
           </button>
@@ -121,7 +121,7 @@ export function StoryPlayer({ onNavigate, episodeId }: { onNavigate: (page: stri
         <AnimatePresence>
           {currentLine.spriteLeft && (
             <motion.div 
-              key={\`left-\${currentLine.spriteLeft}\`}
+              key={`left-${currentLine.spriteLeft}`}
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: -20 }}
               exit={{ opacity: 0, x: -50 }}
@@ -132,7 +132,7 @@ export function StoryPlayer({ onNavigate, episodeId }: { onNavigate: (page: stri
           )}
           {currentLine.spriteCenter && (
             <motion.div 
-              key={\`center-\${currentLine.spriteCenter}\`}
+              key={`center-${currentLine.spriteCenter}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
@@ -143,7 +143,7 @@ export function StoryPlayer({ onNavigate, episodeId }: { onNavigate: (page: stri
           )}
           {currentLine.spriteRight && (
             <motion.div 
-              key={\`right-\${currentLine.spriteRight}\`}
+              key={`right-${currentLine.spriteRight}`}
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 20 }}
               exit={{ opacity: 0, x: 50 }}
