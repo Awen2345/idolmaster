@@ -1,6 +1,7 @@
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import path from "path";
+import fs from "fs";
 
 let dbInstance = null;
 
@@ -265,6 +266,29 @@ export async function setupDatabase() {
       await db.run(`INSERT INTO commus (id, title, type, unlock_condition, reward_type, reward_amount, script) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [c.id, c.title, c.type, c.unlock_condition, c.reward_type, c.reward_amount, c.script]);
     }
+  }
+
+  // Export cards to JSON for voice lines
+  const allCards = await db.all("SELECT id, name FROM cards");
+  const voiceData = allCards.map(card => ({
+    id: card.id,
+    name: card.name,
+    voice_lines: [
+      { text: `Producer, let's do our best today. I am ${card.name}!`, file: "https://actions.google.com/sounds/v1/water/water_drop.ogg" },
+      { text: `I'll show you what I can do.`, file: "https://actions.google.com/sounds/v1/water/water_drop.ogg" }
+    ]
+  }));
+  
+  const publicDataDir = path.join(process.cwd(), 'public', 'data');
+  if (!fs.existsSync(publicDataDir)) {
+    fs.mkdirSync(publicDataDir, { recursive: true });
+  }
+  fs.writeFileSync(path.join(publicDataDir, 'cards_voice.json'), JSON.stringify(voiceData, null, 2));
+
+  // Create voice lines folder
+  const voiceLinesDir = path.join(process.cwd(), 'public', 'voice_lines');
+  if (!fs.existsSync(voiceLinesDir)) {
+    fs.mkdirSync(voiceLinesDir, { recursive: true });
   }
 
   dbInstance = db;
