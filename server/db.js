@@ -24,6 +24,10 @@ export async function setupDatabase() {
       stamina INTEGER DEFAULT 50,
       maxStamina INTEGER DEFAULT 50,
       staminaDrinks INTEGER DEFAULT 10,
+      gachaTickets INTEGER DEFAULT 5,
+      upgradeItems INTEGER DEFAULT 0,
+      expCards INTEGER DEFAULT 0,
+      lastStaminaUpdate TEXT,
       exp INTEGER DEFAULT 0,
       level INTEGER DEFAULT 1,
       fans INTEGER DEFAULT 0,
@@ -174,6 +178,16 @@ export async function setupDatabase() {
   try {
     await db.exec("ALTER TABLE users ADD COLUMN banned_until TEXT");
     await db.exec("ALTER TABLE users ADD COLUMN ban_reason TEXT");
+  } catch (e) {
+    // Columns likely already exist
+  }
+
+  // Add new item columns
+  try {
+    await db.exec("ALTER TABLE users ADD COLUMN gachaTickets INTEGER DEFAULT 5");
+    await db.exec("ALTER TABLE users ADD COLUMN upgradeItems INTEGER DEFAULT 0");
+    await db.exec("ALTER TABLE users ADD COLUMN expCards INTEGER DEFAULT 0");
+    await db.exec("ALTER TABLE users ADD COLUMN lastStaminaUpdate TEXT");
   } catch (e) {
     // Columns likely already exist
   }

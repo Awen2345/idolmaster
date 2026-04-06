@@ -128,6 +128,30 @@ router.get("/user/:id", async (req, res) => {
   const user = await db.get("SELECT * FROM users WHERE id = ?", [userId]);
   if (!user) return res.status(404).json({ error: "User not found" });
 
+  // Stamina Regeneration Logic
+  let currentStamina = user.stamina;
+  let lastUpdate = user.lastStaminaUpdate ? new Date(user.lastStaminaUpdate) : new Date();
+  const now = new Date();
+  
+  if (currentStamina < user.maxStamina) {
+    const diffMs = now.getTime() - lastUpdate.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const staminaToRegen = Math.floor(diffMinutes / 5); // 1 stamina per 5 minutes
+    
+    if (staminaToRegen > 0) {
+      currentStamina = Math.min(user.maxStamina, currentStamina + staminaToRegen);
+      // Update lastUpdate to account for the remainder
+      const remainderMs = diffMs % (5 * 60000);
+      lastUpdate = new Date(now.getTime() - remainderMs);
+      
+      await db.run("UPDATE users SET stamina = ?, lastStaminaUpdate = ? WHERE id = ?", [currentStamina, lastUpdate.toISOString(), userId]);
+    }
+  } else {
+    // If stamina is full or overfilled, just update the timestamp
+    await db.run("UPDATE users SET lastStaminaUpdate = ? WHERE id = ?", [now.toISOString(), userId]);
+    lastUpdate = now;
+  }
+
   const inventoryRows = await db.all(`
     SELECT ui.id as inventory_id, c.* 
     FROM user_inventory ui 
@@ -157,9 +181,13 @@ router.get("/user/:id", async (req, res) => {
   res.json({
     starJewels: user.starJewels,
     coins: user.coins,
-    stamina: user.stamina,
+    stamina: currentStamina,
     maxStamina: user.maxStamina,
     staminaDrinks: user.staminaDrinks,
+    gachaTickets: user.gachaTickets || 0,
+    upgradeItems: user.upgradeItems || 0,
+    expCards: user.expCards || 0,
+    lastStaminaUpdate: lastUpdate.toISOString(),
     exp: user.exp,
     level: user.level,
     fans: user.fans,
@@ -789,6 +817,113 @@ router.post("/commus/:userId/read/:commuId", async (req, res) => {
   } else {
     res.json({ success: true, first_read: false });
   }
+});
+
+// ITEM USAGE ENDPOINTS
+router.post("/items/use/stamina/:id", async (req, res) => {
+  const db = await setupDatabase();
+  const userId = req.params.id;
+  const { amount } = req.body; // Amount of drinks to use
+
+  const user = await db.get("SELECT * FROM users WHERE id = ?", [userId]);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  if (user.staminaDrinks < amount) {
+    return res.status(400).json({ error: "Not enough stamina drinks" });
+  }
+
+  // Each drink restores 50 stamina (or max stamina, depending on game logic. Let's say 50)
+  const staminaRestored = 50 * amount;
+  const newStamina = user.stamina + staminaRestored;
+  const newDrinks = user.staminaDrinks - amount;
+
+  await db.run("UPDATE users SET stamina = ?, staminaDrinks = ? WHERE id = ?", [newStamina, newDrinks, userId]);
+
+  res.json({ success: true, stamina: newStamina, staminaDrinks: newDrinks });
+});
+
+router.post("/items/use/gacha/:id", async (req, res) => {
+  const db = await setupDatabase();
+  const userId = req.params.id;
+  const { count } = req.body; // Number of tickets to use
+
+  const user = await db.get("SELECT * FROM users WHERE id = ?", [userId]);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  if (user.gachaTickets < count) {
+    return res.status(400).json({ error: "Not enough gacha tickets" });
+  }
+
+  // Deduct tickets
+  await db.run("UPDATE users SET gachaTickets = gachaTickets - ? WHERE id = ?", [count, userId]);
+
+  // Perform gacha logic (simplified version of the main gacha logic)
+  const allCards = await db.all("SELECT * FROM cards");
+  const newCards = [];
+  const rates = { SSR: 3, SR: 12, R: 85 };
+
+  for (let i = 0; i < count; i++) {
+    const rand = Math.random() * 100;
+    let rarity = 'R';
+    if (rand < rates.SSR) rarity = 'SSR';
+    else if (rand < rates.SSR + rates.SR) rarity = 'SR';
+    
+    let possibleCards = allCards.filter(c => c.rarity === rarity);
+    if (possibleCards.length === 0) possibleCards = allCards;
+    
+    const selectedCard = possibleCards[Math.floor(Math.random() * possibleCards.length)];
+    const result = await db.run("INSERT INTO user_inventory (user_id, card_id) VALUES (?, ?)", [userId, selectedCard.id]);
+    newCards.push({ ...selectedCard, inventory_id: result.lastID });
+  }
+
+  res.json({ success: true, newCards, gachaTickets: user.gachaTickets - count });
+});
+
+router.post("/items/use/upgrade/:id", async (req, res) => {
+  const db = await setupDatabase();
+  const userId = req.params.id;
+  const { inventoryId, amount } = req.body;
+
+  const user = await db.get("SELECT * FROM users WHERE id = ?", [userId]);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  if (user.upgradeItems < amount) {
+    return res.status(400).json({ error: "Not enough upgrade items" });
+  }
+
+  // Verify user owns the card
+  const card = await db.get("SELECT * FROM user_inventory WHERE id = ? AND user_id = ?", [inventoryId, userId]);
+  if (!card) return res.status(400).json({ error: "Card not found in inventory" });
+
+  // Deduct items
+  await db.run("UPDATE users SET upgradeItems = upgradeItems - ? WHERE id = ?", [amount, userId]);
+
+  // In a real game, this would increase card level/stats. We'll just return success for now.
+  // Assuming we might add a 'level' or 'bonus_stats' column to user_inventory later.
+  res.json({ success: true, upgradeItems: user.upgradeItems - amount, message: "Card upgraded successfully" });
+});
+
+router.post("/items/use/exp/:id", async (req, res) => {
+  const db = await setupDatabase();
+  const userId = req.params.id;
+  const { inventoryId, amount } = req.body;
+
+  const user = await db.get("SELECT * FROM users WHERE id = ?", [userId]);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  if (user.expCards < amount) {
+    return res.status(400).json({ error: "Not enough EXP cards" });
+  }
+
+  // Verify user owns the card
+  const card = await db.get("SELECT * FROM user_inventory WHERE id = ? AND user_id = ?", [inventoryId, userId]);
+  if (!card) return res.status(400).json({ error: "Card not found in inventory" });
+
+  // Deduct items
+  await db.run("UPDATE users SET expCards = expCards - ? WHERE id = ?", [amount, userId]);
+
+  // In a real game, this would increase card EXP.
+  res.json({ success: true, expCards: user.expCards - amount, message: "Card EXP increased successfully" });
 });
 
 export default router;

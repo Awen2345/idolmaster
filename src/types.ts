@@ -35,5 +35,8 @@ export type UserState = {
   stamina: number;
   maxStamina: number;
   staminaDrinks: number;
+  gachaTickets?: number;
+  upgradeItems?: number;
+  expCards?: number;
   inventory: Card[];
 };

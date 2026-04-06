@@ -67,6 +67,9 @@ function AppContent() {
         stamina: data.stamina ?? 0,
         maxStamina: data.maxStamina ?? 0,
         staminaDrinks: data.staminaDrinks ?? 0,
+        gachaTickets: data.gachaTickets ?? 0,
+        upgradeItems: data.upgradeItems ?? 0,
+        expCards: data.expCards ?? 0,
         inventory: data.inventory ?? []
       });
       setFormation(data.formation || [null, null, null, null, null]);
