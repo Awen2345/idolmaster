@@ -103,11 +103,11 @@ export function GachaPage({ onNavigate, userState, setUserState, userId }: { onN
         setTimeout(() => {
           setUserState(prev => prev ? ({
             ...prev,
-            starJewels: (prev.starJewels ?? 0) - cost,
-            inventory: [...(prev.inventory ?? []), ...data.newCards]
+            starJewels: Math.max(0, (prev.starJewels ?? 0) - cost),
+            inventory: [...(prev.inventory ?? []), ...(data.newCards || [])]
           }) : null);
           
-          setPullResults(data.newCards);
+          setPullResults(data.newCards || []);
           setIsPulling(false);
         }, 1500);
       } else {
