@@ -18,10 +18,14 @@ interface PlayerData {
 export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page: string) => void, formation: (Card | null)[], userId: number }) {
   const [player, setPlayer] = useState<PlayerData | null>(null);
   const [isWorking, setIsWorking] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState(() => parseInt(localStorage.getItem('workProgress') || '0'));
   const [showReward, setShowReward] = useState(false);
   const [rewards, setRewards] = useState({ exp: 0, money: 0, fans: 0 });
   const [currentQuote, setCurrentQuote] = useState("今日は調子いいみたいです");
+  
+  // New states for drops
+  const [scoutedCards, setScoutedCards] = useState<Card[]>([]);
+  const [obtainedItems, setObtainedItems] = useState<any[]>([]);
 
   // Use up to 3 idols from the formation for work
   const selectedIdols = formation.slice(0, 3);
@@ -71,9 +75,6 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
 
     setIsWorking(true);
     
-    // Simulate work progress
-    setProgress(prev => Math.min(100, prev + 10));
-    
     // Change quote randomly
     const quotes = [
       "今日は調子いいみたいです",
@@ -83,15 +84,12 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
     ];
     setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
-    setTimeout(() => {
-      finishWork();
-    }, 500);
+    // Call API to process work
+    await finishWork();
   };
 
   // REWARD SYSTEM
   const finishWork = async () => {
-    setIsWorking(false);
-    
     // Generate rewards with passive skill boosts
     const baseExp = 5;
     const baseMoney = 24;
@@ -104,7 +102,6 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
     };
     
     setRewards(generatedRewards);
-    // setShowReward(true); // Disable popup for smoother flow like the original game
 
     try {
       const res = await fetch(`/api/work/${userId}`, {
@@ -129,9 +126,30 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
           fans: data.fans,
           level: data.level
         });
+
+        // Update progress
+        const newProgress = progress + 10;
+        if (newProgress >= 100) {
+          setProgress(0);
+          localStorage.setItem('workProgress', '0');
+          // Could trigger area clear event here
+        } else {
+          setProgress(newProgress);
+          localStorage.setItem('workProgress', newProgress.toString());
+        }
+
+        // Handle drops
+        if (data.droppedCard) {
+          setScoutedCards(prev => [data.droppedCard, ...prev].slice(0, 3));
+        }
+        if (data.droppedItem) {
+          setObtainedItems(prev => [data.droppedItem, ...prev].slice(0, 1));
+        }
       }
     } catch (err) {
       console.error("Failed to save work results", err);
+    } finally {
+      setIsWorking(false);
     }
   };
 
@@ -225,18 +243,26 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
         <div className="flex items-center gap-4 mb-3">
           <div className="flex flex-col">
             <span className="text-[8px] text-gray-400 mb-0.5">スカウト</span>
-            <div className="flex gap-1">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="w-8 h-8 bg-gray-700 border border-gray-500 rounded overflow-hidden">
-                  <img src={`https://picsum.photos/seed/idol${i}/50/50`} alt="scout" className="w-full h-full object-cover" />
+            <div className="flex gap-1 h-8">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="w-8 h-8 bg-gray-700 border border-gray-500 rounded overflow-hidden flex items-center justify-center">
+                  {scoutedCards[i] ? (
+                    <img src={scoutedCards[i].img} alt="scout" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span className="text-gray-500 text-[10px]">?</span>
+                  )}
                 </div>
               ))}
             </div>
           </div>
           <div className="flex flex-col">
             <span className="text-[8px] text-gray-400 mb-0.5">衣装</span>
-            <div className="w-8 h-8 bg-gray-700 border border-gray-500 rounded overflow-hidden">
-              <img src="https://picsum.photos/seed/outfit/50/50" alt="outfit" className="w-full h-full object-cover" />
+            <div className="w-8 h-8 bg-gray-700 border border-gray-500 rounded overflow-hidden flex items-center justify-center">
+              {obtainedItems[0] ? (
+                <img src={obtainedItems[0].img} alt="outfit" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                <span className="text-gray-500 text-[10px]">?</span>
+              )}
             </div>
           </div>
         </div>

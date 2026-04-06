@@ -528,6 +528,26 @@ router.post("/work/:id", async (req, res) => {
     newStamina = newMaxStamina; // Refill on level up
   }
 
+  // Drop Logic (Scout & Items)
+  let droppedCard = null;
+  let droppedItem = null;
+
+  // 30% chance to scout a Normal/Rare idol
+  if (Math.random() < 0.3) {
+    const lowRarityCards = await db.all("SELECT * FROM cards WHERE rarity IN ('N', 'R')");
+    if (lowRarityCards.length > 0) {
+      const randomCard = lowRarityCards[Math.floor(Math.random() * lowRarityCards.length)];
+      const invResult = await db.run("INSERT INTO user_inventory (user_id, card_id) VALUES (?, ?)", [userId, randomCard.id]);
+      droppedCard = { ...randomCard, inventory_id: invResult.lastID };
+    }
+  }
+
+  // 20% chance to get an item (e.g., outfit/upgrade item)
+  if (Math.random() < 0.2) {
+    await db.run("UPDATE users SET upgradeItems = upgradeItems + 1 WHERE id = ?", [userId]);
+    droppedItem = { type: 'outfit', name: 'Stage Dress', img: 'https://picsum.photos/seed/outfit/50/50' };
+  }
+
   await db.run(`
     UPDATE users 
     SET stamina = ?, exp = ?, coins = ?, fans = ?, level = ?, maxStamina = ?
@@ -541,7 +561,9 @@ router.post("/work/:id", async (req, res) => {
     coins: newCoins,
     fans: newFans,
     level: newLevel,
-    maxStamina: newMaxStamina
+    maxStamina: newMaxStamina,
+    droppedCard,
+    droppedItem
   });
 });
 
