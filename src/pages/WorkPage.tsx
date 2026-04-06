@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Briefcase, Star, User } from 'lucide-react';
-import { WorkProgressBar } from '../components/WorkProgressBar';
+import { ChevronLeft, Play, Volume2 } from 'lucide-react';
 import { RewardPopup } from '../components/RewardPopup';
 
 import { Card } from '../types';
@@ -22,9 +21,11 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
   const [progress, setProgress] = useState(0);
   const [showReward, setShowReward] = useState(false);
   const [rewards, setRewards] = useState({ exp: 0, money: 0, fans: 0 });
+  const [currentQuote, setCurrentQuote] = useState("今日は調子いいみたいです");
 
   // Use up to 3 idols from the formation for work
   const selectedIdols = formation.slice(0, 3);
+  const mainIdol = selectedIdols[0] || { name: "島村卯月", img: "https://picsum.photos/seed/uzuki/400/600" };
 
   // Calculate passive skill bonuses
   let expBoost = 0;
@@ -43,7 +44,7 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
     }
   });
 
-  const baseStaminaCost = 20;
+  const baseStaminaCost = 4;
   const staminaCost = Math.max(1, Math.floor(baseStaminaCost * (1 - staminaReduction / 100)));
 
   useEffect(() => {
@@ -69,23 +70,22 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
     if (!player || player.stamina < staminaCost || isWorking) return;
 
     setIsWorking(true);
-    setProgress(0);
+    
+    // Simulate work progress
+    setProgress(prev => Math.min(100, prev + 10));
+    
+    // Change quote randomly
+    const quotes = [
+      "今日は調子いいみたいです",
+      "プロデューサーさん、頑張ります！",
+      "えへへ、楽しいですね！",
+      "次のお仕事は何ですか？"
+    ];
+    setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
-    // Simulate work progress (5 seconds)
-    const duration = 5000;
-    const interval = 50;
-    const steps = duration / interval;
-    let currentStep = 0;
-
-    const timer = setInterval(() => {
-      currentStep++;
-      setProgress((currentStep / steps) * 100);
-
-      if (currentStep >= steps) {
-        clearInterval(timer);
-        finishWork();
-      }
-    }, interval);
+    setTimeout(() => {
+      finishWork();
+    }, 500);
   };
 
   // REWARD SYSTEM
@@ -93,9 +93,9 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
     setIsWorking(false);
     
     // Generate rewards with passive skill boosts
-    const baseExp = 50;
-    const baseMoney = 100;
-    const baseFans = 25;
+    const baseExp = 5;
+    const baseMoney = 24;
+    const baseFans = 1;
 
     const generatedRewards = {
       exp: Math.floor(baseExp * (1 + expBoost / 100)),
@@ -104,7 +104,7 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
     };
     
     setRewards(generatedRewards);
-    setShowReward(true);
+    // setShowReward(true); // Disable popup for smoother flow like the original game
 
     try {
       const res = await fetch(`/api/work/${userId}`, {
@@ -139,133 +139,140 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
   const maxStamina = player?.maxStamina ?? 100;
   const exp = player?.exp ?? 0;
   const nextLevelExp = player?.nextLevelExp ?? 100;
-  const level = player?.level ?? 1;
-
+  
   const hasIdols = selectedIdols.some(i => i !== null);
 
   return (
-    <div className="relative w-full max-w-md mx-auto h-screen bg-slate-900 overflow-hidden flex flex-col font-sans text-slate-100">
-      {/* Header */}
-      <header className="flex items-center justify-between bg-gradient-to-b from-pink-600 to-rose-800 p-3 border-b-2 border-pink-400 shadow-md z-10">
-        <button onClick={() => onNavigate('main')} className="p-1 bg-black/20 rounded-full hover:bg-black/40 transition-colors">
-          <ChevronLeft size={24} className="text-white" />
-        </button>
-        <h1 className="text-lg font-black text-white drop-shadow-md italic tracking-wider flex items-center gap-2">
-          <Briefcase size={20} />
-          IDOL WORK
-        </h1>
-        <div className="w-8"></div>
-      </header>
-
-      {/* Top Area: Background & Progress */}
-      <div className="relative h-48 bg-slate-800 border-b-4 border-slate-700">
-        <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/cityscape/600/400')] bg-cover bg-center opacity-60 mix-blend-luminosity"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
-        
-        <div className="absolute bottom-4 left-4 right-4 z-10">
-          <div className="flex justify-between text-sm font-bold mb-1 drop-shadow-md">
-            <span className="text-pink-300">Work Progress</span>
-            <span className="text-white">{Math.floor(progress)}%</span>
+    <div className="relative w-full max-w-md mx-auto h-screen bg-black overflow-hidden flex flex-col font-sans text-white">
+      
+      {/* Top Bar */}
+      <div className="bg-gradient-to-b from-gray-100 to-gray-300 text-black px-2 py-1 flex items-center justify-between border-b border-gray-400 shadow-sm z-20">
+        <div className="flex items-center gap-2">
+          <div className="bg-pink-600 text-white text-[10px] px-1 rounded-sm font-bold">原宿★2-1本屋でサイン会</div>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] font-bold">達成度</span>
+          <div className="w-24 h-2 bg-gray-300 rounded-full overflow-hidden border border-gray-400">
+            <div className="h-full bg-gradient-to-r from-yellow-300 to-orange-400" style={{ width: `${progress}%` }}></div>
           </div>
-          <WorkProgressBar progress={progress} />
+          <span className="text-[10px] font-bold text-blue-600">{progress}%</span>
+        </div>
+        <div className="w-8 h-8 bg-pink-600 rounded-bl-lg absolute top-0 right-0 flex items-center justify-center shadow-md">
+          <img src="https://api.dicebear.com/7.x/icons/svg?seed=crown&backgroundColor=transparent" className="w-6 h-6 invert" alt="icon" />
         </div>
       </div>
 
-      {/* Middle Area: Stats & Slots */}
-      <div className="flex-1 p-4 flex flex-col gap-6 overflow-y-auto">
+      {/* Main Image Area */}
+      <div className="relative flex-1 bg-slate-800 overflow-hidden">
+        {/* Background */}
+        <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/harajuku/400/600')] bg-cover bg-center opacity-80"></div>
         
-        {/* Player Stats */}
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow-inner">
-          <div className="flex justify-between items-end mb-4 border-b border-slate-700 pb-2">
-            <div className="text-sm font-bold text-slate-400 uppercase tracking-wider">Producer Stats</div>
-            <div className="text-lg font-black text-pink-400 italic">Lv. {level}</div>
+        {/* Character Sprite */}
+        <div className="absolute inset-0 flex items-end justify-center pb-20">
+          <img src={mainIdol?.img} alt="Idol" className="h-[80%] object-contain drop-shadow-xl" referrerPolicy="no-referrer" />
+        </div>
+
+        {/* Speech Bubble */}
+        <div className="absolute bottom-4 left-2 right-24 bg-white/90 backdrop-blur-sm rounded-lg p-2 border-2 border-pink-200 shadow-lg text-black">
+          <div className="flex justify-between items-start mb-1">
+            <div className="text-[10px] font-bold text-gray-600">『{mainIdol?.name}』</div>
+            <button className="bg-pink-500 rounded-full p-1 shadow-sm">
+              <Volume2 size={12} className="text-white" />
+            </button>
           </div>
-          
-          <div className="space-y-3">
-            <div>
-              <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-green-400">Stamina</span>
-                <span className="text-white">{stamina} / {maxStamina}</span>
-              </div>
-              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500" style={{ width: `${Math.min(100, (stamina / maxStamina) * 100)}%` }}></div>
+          <div className="text-sm font-bold">{currentQuote}</div>
+        </div>
+      </div>
+
+      {/* Bottom Dashboard */}
+      <div className="bg-gradient-to-b from-gray-800 to-black p-3 relative z-20 border-t-2 border-gray-600">
+        
+        {/* Big Play Button */}
+        <button 
+          onClick={handleStartWork}
+          disabled={isWorking || stamina < staminaCost || !hasIdols}
+          className={`absolute -top-12 right-4 w-24 h-24 rounded-full border-4 border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.8)] flex flex-col items-center justify-center transition-transform active:scale-95 ${
+            isWorking || stamina < staminaCost || !hasIdols ? 'bg-gray-600 border-gray-400 opacity-80' : 'bg-gradient-to-b from-blue-400 to-blue-800'
+          }`}
+        >
+          <Play size={28} className="text-white ml-1 mb-1 drop-shadow-md" fill="currentColor" />
+          <span className="text-white text-[10px] font-bold drop-shadow-md leading-tight text-center">お仕事を<br/>続ける</span>
+        </button>
+
+        {/* Bars */}
+        <div className="w-[65%] space-y-2 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold w-12 text-right">スタミナ</span>
+            <div className="flex-1 h-3 bg-gray-900 rounded-full overflow-hidden border border-gray-600 relative">
+              <div className="h-full bg-gradient-to-r from-pink-400 to-pink-600" style={{ width: `${Math.min(100, (stamina / maxStamina) * 100)}%` }}></div>
+              <div className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white drop-shadow-md">
+                {stamina} / {maxStamina}
               </div>
             </div>
-            
-            <div>
-              <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-blue-400">EXP</span>
-                <span className="text-white">{exp} / {nextLevelExp}</span>
-              </div>
-              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500" style={{ width: `${Math.min(100, (exp / nextLevelExp) * 100)}%` }}></div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold w-12 text-right text-orange-400">Ex</span>
+            <div className="flex-1 h-3 bg-gray-900 rounded-full overflow-hidden border border-gray-600 relative">
+              <div className="h-full bg-gradient-to-r from-yellow-400 to-orange-500" style={{ width: `${Math.min(100, (exp / nextLevelExp) * 100)}%` }}></div>
+              <div className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white drop-shadow-md">
+                {exp} / {nextLevelExp}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Idol Slots */}
-        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow-inner">
-          <div className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 text-center">Assigned Idols</div>
-          
-          {!hasIdols ? (
-            <div className="text-center text-slate-500 py-4 font-bold">No idols assigned</div>
-          ) : (
-            <div className="flex justify-center gap-4">
-              {selectedIdols.map((idol, idx) => (
-                <div key={idx} className="relative w-20 h-20 rounded-lg border-2 border-slate-600 bg-slate-900 flex items-center justify-center overflow-hidden shadow-md">
-                  {idol ? (
-                    <>
-                      <img src={idol.img} alt={idol.name} className="w-full h-full object-cover opacity-80" referrerPolicy="no-referrer" />
-                      <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[10px] text-center font-bold py-0.5 truncate px-1">
-                        {idol.name}
-                      </div>
-                      <div className="absolute top-1 right-1 bg-pink-500 rounded-full p-0.5 shadow-sm">
-                        <Star size={10} className="text-white" />
-                      </div>
-                    </>
-                  ) : (
-                    <User size={24} className="text-slate-700" />
-                  )}
+        {/* Icons Row */}
+        <div className="flex items-center gap-4 mb-3">
+          <div className="flex flex-col">
+            <span className="text-[8px] text-gray-400 mb-0.5">スカウト</span>
+            <div className="flex gap-1">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="w-8 h-8 bg-gray-700 border border-gray-500 rounded overflow-hidden">
+                  <img src={`https://picsum.photos/seed/idol${i}/50/50`} alt="scout" className="w-full h-full object-cover" />
                 </div>
               ))}
             </div>
-          )}
-          
-          {/* Passive Skills Summary */}
-          {(expBoost > 0 || moneyBoost > 0 || fanBoost > 0 || staminaReduction > 0) && (
-            <div className="mt-4 pt-4 border-t border-slate-700">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">Active Passive Skills</div>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {expBoost > 0 && <span className="text-[10px] bg-blue-900/50 text-blue-300 px-2 py-1 rounded border border-blue-700/50">EXP +{expBoost}%</span>}
-                {moneyBoost > 0 && <span className="text-[10px] bg-yellow-900/50 text-yellow-300 px-2 py-1 rounded border border-yellow-700/50">Money +{moneyBoost}%</span>}
-                {fanBoost > 0 && <span className="text-[10px] bg-pink-900/50 text-pink-300 px-2 py-1 rounded border border-pink-700/50">Fans +{fanBoost}%</span>}
-                {staminaReduction > 0 && <span className="text-[10px] bg-green-900/50 text-green-300 px-2 py-1 rounded border border-green-700/50">Stamina Cost -{staminaReduction}%</span>}
-              </div>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[8px] text-gray-400 mb-0.5">衣装</span>
+            <div className="w-8 h-8 bg-gray-700 border border-gray-500 rounded overflow-hidden">
+              <img src="https://picsum.photos/seed/outfit/50/50" alt="outfit" className="w-full h-full object-cover" />
             </div>
-          )}
+          </div>
         </div>
-      </div>
 
-      {/* Bottom Area: Action Button */}
-      <div className="p-4 bg-slate-800 border-t border-slate-700">
-        <button
-          onClick={handleStartWork}
-          disabled={isWorking || stamina < staminaCost || !hasIdols}
-          className={`w-full py-4 rounded-full font-black text-xl italic tracking-wider shadow-lg transition-all ${
-            isWorking || stamina < staminaCost || !hasIdols
-              ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-              : 'bg-gradient-to-r from-pink-500 to-rose-600 text-white hover:brightness-110 active:scale-95'
-          }`}
-        >
-          {isWorking ? 'WORKING...' : stamina < staminaCost ? 'NO STAMINA' : `START WORK (${staminaCost} STAMINA)`}
+        {/* Stats Row */}
+        <div className="flex justify-between text-[10px] font-bold border-t border-gray-700 pt-2 mb-3">
+          <div className="flex items-center gap-1">
+            <span className="text-gray-400">アイドル</span>
+            <span>35/55</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-gray-400">獲得マニー</span>
+            <span className="text-yellow-400">+{rewards.money || 24}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-gray-400">獲得ファン</span>
+            <span className="text-pink-400">+{rewards.fans || 1}</span>
+          </div>
+        </div>
+
+        {/* Disclaimer Button */}
+        <button className="w-full py-1.5 bg-gradient-to-b from-gray-600 to-gray-800 rounded border border-gray-500 text-[10px] text-gray-300 font-bold mb-2">
+          音声再生に関する免責事項(必読)
         </button>
-      </div>
 
-      {/* Reward Popup */}
-      {showReward && (
-        <RewardPopup rewards={rewards} onClose={() => setShowReward(false)} />
-      )}
+        {/* Navigation Links */}
+        <div className="space-y-1">
+          <button onClick={() => onNavigate('main')} className="w-full text-left py-2 px-3 bg-gray-800/50 border-t border-gray-700 text-yellow-500 text-xs font-bold flex items-center gap-2">
+            <ChevronLeft size={14} /> 原宿お仕事一覧
+          </button>
+          <button onClick={() => onNavigate('main')} className="w-full text-left py-2 px-3 bg-gray-800/50 border-t border-gray-700 text-yellow-500 text-xs font-bold flex items-center gap-2">
+            <ChevronLeft size={14} /> エリア一覧
+          </button>
+        </div>
+
+      </div>
     </div>
   );
 }
