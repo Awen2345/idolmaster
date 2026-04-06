@@ -2,6 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { LoginPage } from './components/LoginPage';
 import { MainPage } from './components/MainPage';
 import { PetitPage } from './components/PetitPage';
+import { PetitLessonPage } from './pages/petit/PetitLessonPage';
+import { PetitBoardPage } from './pages/petit/PetitBoardPage';
+import { PetitProfilePage } from './pages/petit/PetitProfilePage';
+import { PetitMenuPage } from './pages/petit/PetitMenuPage';
+import { PetitTechnicalBoardPage } from './pages/petit/PetitTechnicalBoardPage';
+import { PetitShopPage } from './pages/petit/PetitShopPage';
+import { PetitFormationPage } from './pages/petit/PetitFormationPage';
+import { PetitOutfitSettingsPage } from './pages/petit/PetitOutfitSettingsPage';
 import { FormationPage } from './components/FormationPage';
 import { GachaPage } from './components/GachaPage';
 import { InboxPage } from './components/InboxPage';
@@ -26,7 +34,7 @@ const CLIENT_VERSION = "1.0.0";
 function AppContent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState<'main' | 'petit' | 'formation' | 'gacha' | 'inbox' | 'announcement' | 'cardList' | 'admin' | 'soundbooth' | 'work' | 'live' | 'events' | 'event_tour' | 'commu' | 'commu_list' | 'commu_reader'>('main');
+  const [currentPage, setCurrentPage] = useState<'main' | 'petit' | 'formation' | 'gacha' | 'inbox' | 'announcement' | 'cardList' | 'admin' | 'soundbooth' | 'work' | 'live' | 'events' | 'event_tour' | 'commu' | 'commu_list' | 'commu_reader' | 'petit_lesson' | 'petit_board' | 'petit_profile' | 'petit_menu' | 'petit_tech_board' | 'petit_shop' | 'petit_formation' | 'petit_outfit'>('main');
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
   const [commuParams, setCommuParams] = useState<any>(null);
   
@@ -132,6 +140,22 @@ function AppContent() {
       switch (currentPage) {
         case 'petit':
           return <PetitPage onNavigate={handleNavigate} />;
+        case 'petit_lesson':
+          return <PetitLessonPage onNavigate={handleNavigate} />;
+        case 'petit_board':
+          return <PetitBoardPage onNavigate={handleNavigate} />;
+        case 'petit_profile':
+          return <PetitProfilePage onNavigate={handleNavigate} />;
+        case 'petit_menu':
+          return <PetitMenuPage onNavigate={handleNavigate} />;
+        case 'petit_tech_board':
+          return <PetitTechnicalBoardPage onNavigate={handleNavigate} />;
+        case 'petit_shop':
+          return <PetitShopPage onNavigate={handleNavigate} />;
+        case 'petit_formation':
+          return <PetitFormationPage onNavigate={handleNavigate} />;
+        case 'petit_outfit':
+          return <PetitOutfitSettingsPage onNavigate={handleNavigate} />;
         case 'gacha':
           return <GachaPage onNavigate={handleNavigate} userState={userState} setUserState={setUserState} userId={userId!} />;
         case 'inbox':

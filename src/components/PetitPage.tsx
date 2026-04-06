@@ -14,11 +14,21 @@ export function PetitPage({ onNavigate }: { onNavigate: (page: string) => void }
           <div onClick={() => onNavigate('main')}>
             <NavBtn icon={<Home size={20} />} label="My Studio" color="from-blue-400 to-blue-600" />
           </div>
-          <NavBtn icon={<Bird size={20} />} label="Petit TOP" color="from-orange-400 to-orange-600" />
-          <NavBtn icon={<Music size={20} />} label="Petit Lesson" color="from-pink-400 to-pink-600" />
-          <NavBtn icon={<Star size={20} />} label="Board" color="from-cyan-400 to-cyan-600" />
-          <NavBtn icon={<User size={20} />} label="Petit Profile" color="from-purple-400 to-purple-600" />
-          <NavBtn icon={<Menu size={20} />} label="Petit Menu" color="from-cyan-300 to-cyan-500" rounded />
+          <div onClick={() => onNavigate('petit')}>
+            <NavBtn icon={<Bird size={20} />} label="Petit TOP" color="from-orange-400 to-orange-600" />
+          </div>
+          <div onClick={() => onNavigate('petit_lesson')}>
+            <NavBtn icon={<Music size={20} />} label="Petit Lesson" color="from-pink-400 to-pink-600" />
+          </div>
+          <div onClick={() => onNavigate('petit_board')}>
+            <NavBtn icon={<Star size={20} />} label="Board" color="from-cyan-400 to-cyan-600" />
+          </div>
+          <div onClick={() => onNavigate('petit_profile')}>
+            <NavBtn icon={<User size={20} />} label="Petit Profile" color="from-purple-400 to-purple-600" />
+          </div>
+          <div onClick={() => onNavigate('petit_menu')}>
+            <NavBtn icon={<Menu size={20} />} label="Petit Menu" color="from-cyan-300 to-cyan-500" rounded />
+          </div>
         </header>
 
         {/* Sub Header */}
@@ -101,13 +111,23 @@ export function PetitPage({ onNavigate }: { onNavigate: (page: string) => void }
         {/* Action Buttons Area */}
         <div className="bg-gradient-to-b from-orange-100 to-orange-200 p-2 space-y-2">
           <div className="flex gap-2">
-            <ActionBtn icon={<Music size={24} className="text-pink-500" />} label="Petit Lesson" color="from-pink-100 to-pink-300" borderColor="border-pink-400" textColor="text-pink-600" />
-            <ActionBtn icon={<Star size={24} className="text-blue-500" />} label="Technical Board" color="from-blue-100 to-blue-300" borderColor="border-blue-400" textColor="text-blue-600" />
-            <ActionBtn icon={<ShoppingCart size={24} className="text-yellow-600" />} label="Petit Shop" color="from-yellow-100 to-yellow-300" borderColor="border-yellow-400" textColor="text-yellow-700" />
+            <div className="flex-1" onClick={() => onNavigate('petit_lesson')}>
+              <ActionBtn icon={<Music size={24} className="text-pink-500" />} label="Petit Lesson" color="from-pink-100 to-pink-300" borderColor="border-pink-400" textColor="text-pink-600" />
+            </div>
+            <div className="flex-1" onClick={() => onNavigate('petit_tech_board')}>
+              <ActionBtn icon={<Star size={24} className="text-blue-500" />} label="Technical Board" color="from-blue-100 to-blue-300" borderColor="border-blue-400" textColor="text-blue-600" />
+            </div>
+            <div className="flex-1" onClick={() => onNavigate('petit_shop')}>
+              <ActionBtn icon={<ShoppingCart size={24} className="text-yellow-600" />} label="Petit Shop" color="from-yellow-100 to-yellow-300" borderColor="border-yellow-400" textColor="text-yellow-700" />
+            </div>
           </div>
           <div className="flex gap-2">
-            <ActionBtn icon={<Users size={20} className="text-blue-400" />} label="Petit Formation" color="from-blue-50 to-blue-100" borderColor="border-blue-300" textColor="text-blue-500" small />
-            <ActionBtn icon={<Star size={20} className="text-blue-400" />} label="Outfit Settings" color="from-blue-50 to-blue-100" borderColor="border-blue-300" textColor="text-blue-500" small />
+            <div className="flex-1" onClick={() => onNavigate('petit_formation')}>
+              <ActionBtn icon={<Users size={20} className="text-blue-400" />} label="Petit Formation" color="from-blue-50 to-blue-100" borderColor="border-blue-300" textColor="text-blue-500" small />
+            </div>
+            <div className="flex-1" onClick={() => onNavigate('petit_outfit')}>
+              <ActionBtn icon={<Star size={20} className="text-blue-400" />} label="Outfit Settings" color="from-blue-50 to-blue-100" borderColor="border-blue-300" textColor="text-blue-500" small />
+            </div>
           </div>
         </div>
 
