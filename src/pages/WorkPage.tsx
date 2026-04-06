@@ -84,13 +84,7 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
     ];
     setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
-    // Call API to process work
-    await finishWork();
-  };
-
-  // REWARD SYSTEM
-  const finishWork = async () => {
-    // Generate rewards with passive skill boosts
+    // Optimistic Update for instant feedback
     const baseExp = 5;
     const baseMoney = 24;
     const baseFans = 1;
@@ -103,6 +97,46 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
     
     setRewards(generatedRewards);
 
+    setPlayer(prev => {
+      if (!prev) return prev;
+      let newStamina = prev.stamina - staminaCost;
+      let newExp = prev.exp + generatedRewards.exp;
+      let newMoney = prev.money + generatedRewards.money;
+      let newFans = prev.fans + generatedRewards.fans;
+      let newLevel = prev.level;
+      let newMaxStamina = prev.maxStamina;
+      let nextLevelExp = prev.nextLevelExp;
+
+      if (newExp >= nextLevelExp) {
+        newLevel++;
+        newExp -= nextLevelExp;
+        nextLevelExp = newLevel * 1000;
+        newMaxStamina += 5;
+        newStamina = newMaxStamina;
+      }
+
+      return {
+        ...prev,
+        stamina: newStamina,
+        exp: newExp,
+        money: newMoney,
+        fans: newFans,
+        level: newLevel,
+        maxStamina: newMaxStamina,
+        nextLevelExp
+      };
+    });
+
+    const newProgress = progress + 10;
+    if (newProgress >= 100) {
+      setProgress(0);
+      localStorage.setItem('workProgress', '0');
+    } else {
+      setProgress(newProgress);
+      localStorage.setItem('workProgress', newProgress.toString());
+    }
+
+    // Call API to process work in background
     try {
       const res = await fetch(`/api/work/${userId}`, {
         method: 'POST',
@@ -117,6 +151,7 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
 
       if (res.ok) {
         const data = await res.json();
+        // Sync with server state
         setPlayer({
           stamina: data.stamina,
           maxStamina: data.maxStamina,
@@ -126,17 +161,6 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
           fans: data.fans,
           level: data.level
         });
-
-        // Update progress
-        const newProgress = progress + 10;
-        if (newProgress >= 100) {
-          setProgress(0);
-          localStorage.setItem('workProgress', '0');
-          // Could trigger area clear event here
-        } else {
-          setProgress(newProgress);
-          localStorage.setItem('workProgress', newProgress.toString());
-        }
 
         // Handle drops
         if (data.droppedCard) {
@@ -149,7 +173,8 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
     } catch (err) {
       console.error("Failed to save work results", err);
     } finally {
-      setIsWorking(false);
+      // Small delay to prevent spamming too fast and hitting rate limits
+      setTimeout(() => setIsWorking(false), 200);
     }
   };
 
@@ -208,9 +233,9 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
         {/* Big Play Button */}
         <button 
           onClick={handleStartWork}
-          disabled={isWorking || stamina < staminaCost || !hasIdols}
+          disabled={isWorking || stamina < staminaCost}
           className={`absolute -top-12 right-4 w-24 h-24 rounded-full border-4 border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.8)] flex flex-col items-center justify-center transition-transform active:scale-95 ${
-            isWorking || stamina < staminaCost || !hasIdols ? 'bg-gray-600 border-gray-400 opacity-80' : 'bg-gradient-to-b from-blue-400 to-blue-800'
+            isWorking || stamina < staminaCost ? 'bg-gray-600 border-gray-400 opacity-80' : 'bg-gradient-to-b from-blue-400 to-blue-800'
           }`}
         >
           <Play size={28} className="text-white ml-1 mb-1 drop-shadow-md" fill="currentColor" />
