@@ -13,6 +13,8 @@ interface PlayerData {
   money: number;
   fans: number;
   level: number;
+  lastStaminaUpdate?: string;
+  staminaDrinks?: number;
 }
 
 export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page: string) => void, formation: (Card | null)[], userId: number }) {
@@ -26,6 +28,37 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
   // New states for drops
   const [scoutedCards, setScoutedCards] = useState<Card[]>([]);
   const [obtainedItems, setObtainedItems] = useState<any[]>([]);
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [timeToNextStamina, setTimeToNextStamina] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!player || player.stamina >= player.maxStamina || !player.lastStaminaUpdate) {
+      setTimeToNextStamina(null);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const lastUpdate = new Date(player.lastStaminaUpdate!).getTime();
+      const diff = now - lastUpdate;
+      const regenInterval = 5 * 60 * 1000; // 5 minutes
+
+      if (diff >= regenInterval) {
+        setPlayer(prev => {
+          if (!prev) return prev;
+          const points = Math.floor(diff / regenInterval);
+          const newStamina = Math.min(prev.maxStamina, prev.stamina + points);
+          const remainder = diff % regenInterval;
+          const newLastUpdate = new Date(now - remainder).toISOString();
+          return { ...prev, stamina: newStamina, lastStaminaUpdate: newLastUpdate };
+        });
+      } else {
+        setTimeToNextStamina(regenInterval - diff);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [player?.stamina, player?.maxStamina, player?.lastStaminaUpdate]);
 
   // Use up to 3 idols from the formation for work
   const selectedIdols = formation.slice(0, 3);
@@ -63,7 +96,9 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
           nextLevelExp: data.level * 1000, // Simplified for now
           money: data.coins,
           fans: data.fans,
-          level: data.level
+          level: data.level,
+          lastStaminaUpdate: data.lastStaminaUpdate,
+          staminaDrinks: data.staminaDrinks
         });
       })
       .catch(err => console.error("Failed to load user data", err));
@@ -123,7 +158,8 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
         fans: newFans,
         level: newLevel,
         maxStamina: newMaxStamina,
-        nextLevelExp
+        nextLevelExp,
+        lastStaminaUpdate: (prev.stamina >= prev.maxStamina && newStamina < newMaxStamina) ? new Date().toISOString() : prev.lastStaminaUpdate
       };
     });
 
@@ -152,15 +188,17 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
       if (res.ok) {
         const data = await res.json();
         // Sync with server state
-        setPlayer({
+        setPlayer(prev => prev ? {
+          ...prev,
           stamina: data.stamina,
           maxStamina: data.maxStamina,
           exp: data.exp,
           nextLevelExp: data.level * 1000,
           money: data.coins,
           fans: data.fans,
-          level: data.level
-        });
+          level: data.level,
+          lastStaminaUpdate: data.lastStaminaUpdate || prev.lastStaminaUpdate
+        } : null);
 
         // Handle drops
         if (data.droppedCard) {
@@ -183,6 +221,26 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
   const exp = player?.exp ?? 0;
   const nextLevelExp = player?.nextLevelExp ?? 100;
   
+  const handleUseItem = async () => {
+    try {
+      const res = await fetch(`/api/items/use/stamina/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: 1 })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPlayer(prev => prev ? { ...prev, stamina: data.stamina, staminaDrinks: data.staminaDrinks } : null);
+        setShowItemModal(false);
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to use item");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const hasIdols = selectedIdols.some(i => i !== null);
 
   return (
@@ -252,7 +310,15 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
                 {stamina} / {maxStamina}
               </div>
             </div>
+            <button onClick={() => setShowItemModal(true)} className="w-4 h-4 bg-green-500 hover:bg-green-400 text-white rounded-full flex items-center justify-center text-[12px] font-bold shadow-md leading-none pb-0.5 shrink-0">
+              +
+            </button>
           </div>
+          {timeToNextStamina !== null && stamina < maxStamina && (
+            <div className="text-[8px] text-right text-gray-300 -mt-1.5 pr-6">
+              Regen in: {Math.floor(timeToNextStamina / 60000)}:{(Math.floor((timeToNextStamina % 60000) / 1000)).toString().padStart(2, '0')}
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold w-12 text-right text-orange-400">Ex</span>
             <div className="flex-1 h-3 bg-gray-900 rounded-full overflow-hidden border border-gray-600 relative">
@@ -324,6 +390,33 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
         </div>
 
       </div>
+
+      {/* Item Modal */}
+      {showItemModal && (
+        <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-slate-800 border-2 border-slate-600 rounded-xl p-4 w-full max-w-xs text-center shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-2">Recover Stamina</h3>
+            <p className="text-sm text-gray-300 mb-4">Use a Stamina Drink to recover 50 Stamina?</p>
+            <div className="flex justify-center items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center text-2xl border border-slate-500">🍹</div>
+              <div className="text-left">
+                <div className="text-xs text-gray-400">Owned</div>
+                <div className="text-xl font-bold text-white">{player?.staminaDrinks || 0}</div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowItemModal(false)} className="flex-1 py-2 bg-gray-600 hover:bg-gray-500 rounded font-bold text-white transition-colors">Cancel</button>
+              <button 
+                onClick={handleUseItem} 
+                disabled={!player?.staminaDrinks || player.staminaDrinks <= 0}
+                className="flex-1 py-2 bg-green-500 hover:bg-green-400 disabled:bg-gray-700 disabled:text-gray-500 rounded font-bold text-white transition-colors"
+              >
+                Use Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

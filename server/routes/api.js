@@ -548,15 +548,26 @@ router.post("/work/:id", async (req, res) => {
     droppedItem = { type: 'outfit', name: 'Stage Dress', img: 'https://picsum.photos/seed/outfit/50/50' };
   }
 
-  await db.run(`
-    UPDATE users 
-    SET stamina = ?, exp = ?, coins = ?, fans = ?, level = ?, maxStamina = ?
-    WHERE id = ?
-  `, [newStamina, newExp, newCoins, newFans, newLevel, newMaxStamina, userId]);
+  let newLastUpdate = user.lastStaminaUpdate;
+  if (user.stamina >= user.maxStamina && newStamina < newMaxStamina) {
+    newLastUpdate = new Date().toISOString();
+    await db.run(`
+      UPDATE users 
+      SET stamina = ?, exp = ?, coins = ?, fans = ?, level = ?, maxStamina = ?, lastStaminaUpdate = ?
+      WHERE id = ?
+    `, [newStamina, newExp, newCoins, newFans, newLevel, newMaxStamina, newLastUpdate, userId]);
+  } else {
+    await db.run(`
+      UPDATE users 
+      SET stamina = ?, exp = ?, coins = ?, fans = ?, level = ?, maxStamina = ?
+      WHERE id = ?
+    `, [newStamina, newExp, newCoins, newFans, newLevel, newMaxStamina, userId]);
+  }
 
   res.json({
     success: true,
     stamina: newStamina,
+    lastStaminaUpdate: newLastUpdate,
     exp: newExp,
     coins: newCoins,
     fans: newFans,
