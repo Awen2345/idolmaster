@@ -655,6 +655,20 @@ router.post("/events/:eventId/user/:userId/progress", async (req, res) => {
 });
 
 // NEW FEATURE: LOGIN BONUS
+router.get("/login-bonus/:userId", async (req, res) => {
+  const db = await setupDatabase();
+  const { userId } = req.params;
+  
+  let loginRecord = await db.get("SELECT * FROM user_logins WHERE user_id = ?", [userId]);
+  
+  if (!loginRecord) {
+    // If no record exists, return a default one
+    loginRecord = { user_id: userId, last_login_date: null, consecutive_days: 0, total_days: 0 };
+  }
+  
+  res.json({ status: 'success', record: loginRecord });
+});
+
 router.post("/login-bonus/:userId", async (req, res) => {
   const db = await setupDatabase();
   const { userId } = req.params;
@@ -690,15 +704,21 @@ router.post("/login-bonus/:userId", async (req, res) => {
     loginRecord.total_days += 1;
   }
   
-  // Give reward (e.g., 50 jewels daily, 250 every 7 days)
-  let rewardJewels = 50;
-  if (loginRecord.consecutive_days % 7 === 0) {
-    rewardJewels = 250;
+  // Give reward based on 7-day cycle
+  const cycleDay = loginRecord.consecutive_days % 7 === 0 ? 7 : loginRecord.consecutive_days % 7;
+  let reward = { type: 'jewels', amount: 50 };
+  
+  if (cycleDay === 6) {
+    reward = { type: 'upgradeItems', amount: 1 };
+    await db.run("UPDATE users SET upgradeItems = upgradeItems + ? WHERE id = ?", [reward.amount, userId]);
+  } else if (cycleDay === 7) {
+    reward = { type: 'jewels', amount: 100 };
+    await db.run("UPDATE users SET starJewels = starJewels + ? WHERE id = ?", [reward.amount, userId]);
+  } else {
+    await db.run("UPDATE users SET starJewels = starJewels + ? WHERE id = ?", [reward.amount, userId]);
   }
   
-  await db.run("UPDATE users SET starJewels = starJewels + ? WHERE id = ?", [rewardJewels, userId]);
-  
-  res.json({ status: 'claimed', reward: { type: 'jewels', amount: rewardJewels }, record: loginRecord });
+  res.json({ status: 'claimed', reward, record: loginRecord });
 });
 
 // NEW FEATURE: MISSIONS

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Star, Heart, Music, Sparkles } from 'lucide-react';
+import { Star, Sparkles } from 'lucide-react';
 
 export function LoginPage({ onLogin }: { onLogin: (userId: number) => void }) {
   const [username, setUsername] = useState('');
@@ -35,90 +35,57 @@ export function LoginPage({ onLogin }: { onLogin: (userId: number) => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200 flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
-      {/* Decorative background elements */}
-      <motion.div 
-        animate={{ y: [0, -20, 0], rotate: [0, 10, 0] }} 
-        transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-        className="absolute top-10 left-10 text-pink-400 opacity-50"
-      >
-        <Star size={64} fill="currentColor" />
-      </motion.div>
-      <motion.div 
-        animate={{ y: [0, 20, 0], rotate: [0, -10, 0] }} 
-        transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 1 }}
-        className="absolute bottom-20 right-10 text-blue-400 opacity-50"
-      >
-        <Music size={80} />
-      </motion.div>
-      <motion.div 
-        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }} 
-        transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-        className="absolute top-1/4 right-1/4 text-purple-400"
-      >
-        <Sparkles size={48} />
-      </motion.div>
+    <div className="relative w-full h-screen bg-black overflow-hidden flex flex-col font-sans">
+      {/* Background Image with original ratio */}
+      <div className="absolute inset-0 z-0 flex items-center justify-center">
+        <img 
+          src="https://assets.st-note.com/production/uploads/images/5078440/picture_pc_1aef0fc7c152d38a214dcbb63873a093.jpg?width=1200" 
+          alt="Title Screen" 
+          className="w-full h-full object-contain"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+      
+      {/* Gradient overlay at the bottom for readability */}
+      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-0 pointer-events-none"></div>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, type: "spring" }}
-        className="w-full max-w-md bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden border border-white/50 relative z-10"
-      >
-        <div className="bg-gradient-to-r from-pink-400 to-purple-500 p-6 text-center relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div>
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-            className="w-20 h-20 bg-white rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg relative z-10"
-          >
-            <Heart className="text-pink-500" size={40} fill="currentColor" />
-          </motion.div>
-          <h1 className="text-3xl font-bold text-white drop-shadow-md relative z-10 tracking-tight">
-            IDOLMASTER
-          </h1>
-          <h2 className="text-xl font-medium text-pink-100 drop-shadow-sm relative z-10">
-            Cinderella Girls
-          </h2>
-        </div>
-
-        <div className="p-8">
-          <form onSubmit={handleLogin} className="space-y-6">
-            {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm text-center">{error}</div>}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
-                Producer ID
-              </label>
+      {/* Main Content Area - Pushed to bottom */}
+      <div className="relative z-10 flex flex-col h-full w-full max-w-md mx-auto justify-end pb-12 px-8">
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.5 }}
+          className="w-full"
+        >
+          <form onSubmit={handleLogin} className="space-y-4">
+            {error && <div className="bg-red-500/80 backdrop-blur-sm border border-red-400 text-white px-4 py-2 rounded-lg text-sm text-center shadow-lg">{error}</div>}
+            
+            <div className="space-y-3">
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border-2 border-pink-100 focus:border-pink-400 focus:ring-4 focus:ring-pink-100 transition-all outline-none bg-white/50"
-                placeholder="Enter your ID"
+                className="w-full px-4 py-3 rounded-full border border-white/30 bg-black/40 backdrop-blur-md text-white placeholder-gray-300 text-center focus:border-pink-400 focus:ring-2 focus:ring-pink-400/50 transition-all outline-none"
+                placeholder="Producer ID"
                 required
               />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wider">
-                Password
-              </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border-2 border-pink-100 focus:border-pink-400 focus:ring-4 focus:ring-pink-100 transition-all outline-none bg-white/50"
-                placeholder="••••••••"
+                className="w-full px-4 py-3 rounded-full border border-white/30 bg-black/40 backdrop-blur-md text-white placeholder-gray-300 text-center focus:border-pink-400 focus:ring-2 focus:ring-pink-400/50 transition-all outline-none"
+                placeholder="Password"
                 required
               />
             </div>
 
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               type="submit"
               disabled={isLoading || !username || !password}
-              className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-pink-500/30 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+              className="w-full py-3.5 mt-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full font-black text-lg tracking-wider shadow-[0_0_20px_rgba(236,72,153,0.6)] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:shadow-none border border-pink-400/50"
             >
               {isLoading ? (
                 <motion.div
@@ -130,22 +97,19 @@ export function LoginPage({ onLogin }: { onLogin: (userId: number) => void }) {
               ) : (
                 <>
                   <Sparkles size={20} />
-                  START LIVE!
+                  GAME START
                 </>
               )}
             </motion.button>
           </form>
 
-          <div className="mt-6 text-center">
-            <a href="#" className="text-sm text-pink-500 hover:text-pink-600 font-medium transition-colors">
-              Forgot Password?
-            </a>
-            <div className="mt-4 text-xs text-gray-400">
+          <div className="mt-6 text-center space-y-2">
+            <div className="text-[10px] text-gray-400 tracking-widest">
               © BANDAI NAMCO Entertainment Inc.
             </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }

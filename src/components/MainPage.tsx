@@ -9,6 +9,7 @@ import { MenuOverlay } from './MenuOverlay';
 import { Card, UserState } from '../types';
 import { FloatingPromoButton } from './FloatingPromoButton';
 import { PromoCodeModal } from './PromoCodeModal';
+import { LoginBonusPopup } from './LoginBonusPopup';
 
 export function MainPage({ onNavigate, formation, userState, userId, onRefresh }: { onNavigate: (page: string) => void, formation: (Card | null)[], userState: UserState | null, userId: number, onRefresh: () => void }) {
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
@@ -131,6 +132,18 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
             <div onClick={() => onNavigate('petit')} className="bg-gradient-to-b from-orange-400 to-orange-600 rounded border border-orange-700 p-1 flex flex-col items-center justify-center cursor-pointer shadow-sm hover:brightness-110">
               <Bird size={14} className="text-white mb-0.5" />
               <span className="text-[8px] font-bold text-white text-center leading-tight">Petit Bird</span>
+            </div>
+            <div onClick={() => {
+              fetch(`/api/login-bonus/${userId}`)
+                .then(res => res.json())
+                .then(data => {
+                  if (data.status === 'success') {
+                    setLoginBonus({ record: data.record, isViewing: true });
+                  }
+                });
+            }} className="bg-gradient-to-b from-green-400 to-green-600 rounded border border-green-700 p-1 flex flex-col items-center justify-center cursor-pointer shadow-sm hover:brightness-110">
+              <Calendar size={14} className="text-white mb-0.5" />
+              <span className="text-[8px] font-bold text-white text-center leading-tight">Login Bonus</span>
             </div>
           </div>
         </div>
@@ -255,41 +268,12 @@ export function MainPage({ onNavigate, formation, userState, userId, onRefresh }
         {/* Login Bonus Popup */}
         <AnimatePresence>
           {loginBonus && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-            >
-              <motion.div 
-                initial={{ scale: 0.8, y: 20 }}
-                animate={{ scale: 1, y: 0 }}
-                className="bg-gradient-to-b from-blue-600 to-indigo-900 rounded-2xl border-4 border-yellow-400 p-6 w-full max-w-sm text-center shadow-2xl relative overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div>
-                
-                <div className="relative z-10">
-                  <h2 className="text-3xl font-black text-white drop-shadow-md italic tracking-wider mb-2">LOGIN BONUS</h2>
-                  
-                  <div className="bg-black/40 rounded-xl p-4 mb-4 border border-blue-400">
-                    <div className="text-yellow-300 font-bold mb-1">Day {loginBonus.record.consecutive_days}</div>
-                    <div className="flex justify-center items-center gap-2 text-2xl font-black text-white">
-                      {loginBonus.reward.type === 'jewels' ? <Star className="text-pink-400" fill="currentColor" size={32} /> : <Coins className="text-yellow-400" size={32} />}
-                      +{loginBonus.reward.amount}
-                    </div>
-                  </div>
-                  
-                  <p className="text-blue-200 text-sm mb-6">Log in every day for more rewards!</p>
-                  
-                  <button 
-                    onClick={() => setLoginBonus(null)}
-                    className="bg-gradient-to-r from-pink-500 to-rose-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:brightness-110 w-full"
-                  >
-                    CLAIM
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
+            <LoginBonusPopup 
+              record={loginBonus.record} 
+              reward={loginBonus.reward} 
+              isViewing={loginBonus.isViewing}
+              onClose={() => setLoginBonus(null)} 
+            />
           )}
         </AnimatePresence>
       </div>
