@@ -151,6 +151,13 @@ export async function setupDatabase() {
       FOREIGN KEY(user_id) REFERENCES users(id),
       FOREIGN KEY(commu_id) REFERENCES commus(id)
     );
+
+    CREATE TABLE IF NOT EXISTS idol_icons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      icon_url TEXT,
+      sprite_url TEXT
+    );
   `);
 
   // Add attribute column if it doesn't exist (for migration)
@@ -191,6 +198,11 @@ export async function setupDatabase() {
   } catch (e) {
     // Columns likely already exist
   }
+
+  // Add work_idol_id
+  try {
+    await db.exec("ALTER TABLE users ADD COLUMN work_idol_id INTEGER DEFAULT 1");
+  } catch (e) {}
 
   // Seed initial cards if empty
   const cardCount = await db.get("SELECT COUNT(*) as count FROM cards");
@@ -279,6 +291,21 @@ export async function setupDatabase() {
     for (const c of initialCommus) {
       await db.run(`INSERT INTO commus (id, title, type, unlock_condition, reward_type, reward_amount, script) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [c.id, c.title, c.type, c.unlock_condition, c.reward_type, c.reward_amount, c.script]);
+    }
+  }
+
+  const idolIconCount = await db.get("SELECT COUNT(*) as count FROM idol_icons");
+  if (idolIconCount.count === 0) {
+    const initialIcons = [
+      { name: "Uzuki Shimamura", icon_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Uzuki&backgroundColor=ffdfbf", sprite_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Uzuki&backgroundColor=ffdfbf" },
+      { name: "Rin Shibuya", icon_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Rin&backgroundColor=bfe6ff", sprite_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Rin&backgroundColor=bfe6ff" },
+      { name: "Mio Honda", icon_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Mio&backgroundColor=ffffbf", sprite_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Mio&backgroundColor=ffffbf" },
+      { name: "Kaede Takagaki", icon_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Kaede&backgroundColor=bfe6ff", sprite_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Kaede&backgroundColor=bfe6ff" },
+      { name: "Mika Jougasaki", icon_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Mika&backgroundColor=ffffbf", sprite_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Mika&backgroundColor=ffffbf" }
+    ];
+    for (const icon of initialIcons) {
+      await db.run(`INSERT INTO idol_icons (name, icon_url, sprite_url) VALUES (?, ?, ?)`,
+        [icon.name, icon.icon_url, icon.sprite_url]);
     }
   }
 

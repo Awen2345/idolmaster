@@ -31,6 +31,61 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
   const [showItemModal, setShowItemModal] = useState(false);
   const [timeToNextStamina, setTimeToNextStamina] = useState<number | null>(null);
 
+  // New states for Idol Selection
+  const [idolIcons, setIdolIcons] = useState<any[]>([]);
+  const [showIdolSelection, setShowIdolSelection] = useState(false);
+  const [workIdol, setWorkIdol] = useState<{ id: number, name: string, icon_url: string, sprite_url: string } | null>(null);
+
+  useEffect(() => {
+    // Load player data from server
+    fetch(`/api/user/${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        setPlayer({
+          stamina: data.stamina,
+          maxStamina: data.maxStamina,
+          exp: data.exp,
+          nextLevelExp: data.level * 1000, // Simplified for now
+          money: data.coins,
+          fans: data.fans,
+          level: data.level,
+          lastStaminaUpdate: data.lastStaminaUpdate,
+          staminaDrinks: data.staminaDrinks
+        });
+        if (data.workIdol) {
+          setWorkIdol(data.workIdol);
+        } else {
+          setShowIdolSelection(true); // Must select an idol if none is set
+        }
+      })
+      .catch(err => console.error("Failed to load user data", err));
+
+    // Load available idol icons
+    fetch(`/api/idol-icons`)
+      .then(res => res.json())
+      .then(data => setIdolIcons(data))
+      .catch(err => console.error("Failed to load idol icons", err));
+  }, [userId]);
+
+  const selectIdol = async (idolId: number) => {
+    try {
+      const res = await fetch(`/api/user/${userId}/work-idol`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idol_id: idolId })
+      });
+      if (res.ok) {
+        const selected = idolIcons.find(i => i.id === idolId);
+        if (selected) {
+          setWorkIdol(selected);
+        }
+        setShowIdolSelection(false);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     if (!player || player.stamina >= player.maxStamina || !player.lastStaminaUpdate) {
       setTimeToNextStamina(null);
@@ -60,9 +115,11 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
     return () => clearInterval(interval);
   }, [player?.stamina, player?.maxStamina, player?.lastStaminaUpdate]);
 
-  // Use up to 3 idols from the formation for work
+  // Use the selected workIdol if available, otherwise fallback.
+  // We still use formation for passive skills, or wait... maybe the user wants the selected idol to give bonuses?
+  // Let's just keep formation for bonuses as before, but the visual idol is the selected workIdol!
   const selectedIdols = formation.slice(0, 3);
-  const mainIdol = selectedIdols[0] || { name: "島村卯月", img: "https://picsum.photos/seed/uzuki/400/600" };
+  const mainIdol = workIdol ? { name: workIdol.name, img: workIdol.sprite_url } : (selectedIdols[0] || { name: "島村卯月", img: "https://picsum.photos/seed/uzuki/400/600" });
 
   // Calculate passive skill bonuses
   let expBoost = 0;
@@ -83,26 +140,6 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
 
   const baseStaminaCost = 4;
   const staminaCost = Math.max(1, Math.floor(baseStaminaCost * (1 - staminaReduction / 100)));
-
-  useEffect(() => {
-    // Load player data from server
-    fetch(`/api/user/${userId}`)
-      .then(res => res.json())
-      .then(data => {
-        setPlayer({
-          stamina: data.stamina,
-          maxStamina: data.maxStamina,
-          exp: data.exp,
-          nextLevelExp: data.level * 1000, // Simplified for now
-          money: data.coins,
-          fans: data.fans,
-          level: data.level,
-          lastStaminaUpdate: data.lastStaminaUpdate,
-          staminaDrinks: data.staminaDrinks
-        });
-      })
-      .catch(err => console.error("Failed to load user data", err));
-  }, [userId]);
 
   // IDOL JOB
   const handleStartWork = async () => {
@@ -273,6 +310,14 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
           <img src={mainIdol?.img} alt="Idol" className="h-[80%] object-contain drop-shadow-xl" referrerPolicy="no-referrer" />
         </div>
 
+        {/* Change Partner Button */}
+        <button 
+          onClick={() => setShowIdolSelection(true)}
+          className="absolute top-4 left-4 bg-black/60 hover:bg-black/80 text-white border border-pink-400 rounded-full px-3 py-1 text-[10px] font-bold shadow-md transition-colors backdrop-blur-sm"
+        >
+          Change Partner
+        </button>
+
         {/* Speech Bubble */}
         <div className="absolute bottom-4 left-2 right-24 bg-white/90 backdrop-blur-sm rounded-lg p-2 border-2 border-pink-200 shadow-lg text-black">
           <div className="flex justify-between items-start mb-1">
@@ -414,6 +459,31 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
                 Use Item
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Idol Selection Modal */}
+      {(showIdolSelection || idolIcons.length > 0 && workIdol === null) && (
+        <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-b from-gray-800 to-black border-2 border-pink-400 rounded-xl p-4 w-full max-w-sm text-center shadow-[0_0_20px_rgba(244,114,182,0.3)]">
+            <h3 className="text-xl font-bold text-pink-400 mb-2 italic">Select Partner Idol</h3>
+            <p className="text-xs text-gray-300 mb-4">Choose an idol to accompany you during work!</p>
+            
+            <div className="grid grid-cols-3 gap-3 mb-4 max-h-[60vh] overflow-y-auto p-1">
+              {idolIcons.map(icon => (
+                <div key={icon.id} onClick={() => selectIdol(icon.id)} className="cursor-pointer bg-slate-800 border border-slate-600 rounded-lg p-2 flex flex-col items-center hover:border-pink-400 hover:bg-slate-700 transition-colors">
+                  <div className="w-16 h-16 bg-white rounded-full mb-2 overflow-hidden border-2 border-gray-300 shadow-inner">
+                    <img src={icon.icon_url} alt={icon.name} className="w-full h-full object-cover" />
+                  </div>
+                  <span className="text-[10px] text-white font-bold text-center leading-tight">{icon.name}</span>
+                </div>
+              ))}
+            </div>
+            
+            {!showIdolSelection && workIdol !== null && (
+              <button onClick={() => setShowIdolSelection(false)} className="w-full py-2 bg-gray-600 hover:bg-gray-500 rounded font-bold text-white transition-colors">Close</button>
+            )}
           </div>
         </div>
       )}

@@ -125,7 +125,7 @@ router.get("/admin/users", async (req, res) => {
 router.get("/user/:id", async (req, res) => {
   const db = await setupDatabase();
   const userId = req.params.id;
-  const user = await db.get("SELECT * FROM users WHERE id = ?", [userId]);
+  const user = await db.get("SELECT users.*, idol_icons.icon_url, idol_icons.sprite_url, idol_icons.name as idol_name FROM users LEFT JOIN idol_icons ON users.work_idol_id = idol_icons.id WHERE users.id = ?", [userId]);
   if (!user) return res.status(404).json({ error: "User not found" });
 
   // Stamina Regeneration Logic
@@ -191,9 +191,30 @@ router.get("/user/:id", async (req, res) => {
     exp: user.exp,
     level: user.level,
     fans: user.fans,
+    workIdol: user.work_idol_id ? {
+      id: user.work_idol_id,
+      name: user.idol_name,
+      icon_url: user.icon_url,
+      sprite_url: user.sprite_url
+    } : null,
     inventory: inventoryRows.map(r => parseSkills({ ...r, id: r.inventory_id, card_id: r.id })),
     formation
   });
+});
+
+router.get("/idol-icons", async (req, res) => {
+  const db = await setupDatabase();
+  const icons = await db.all("SELECT * FROM idol_icons");
+  res.json(icons);
+});
+
+router.post("/user/:id/work-idol", async (req, res) => {
+  const db = await setupDatabase();
+  const userId = req.params.id;
+  const { idol_id } = req.body;
+  
+  await db.run("UPDATE users SET work_idol_id = ? WHERE id = ?", [idol_id, userId]);
+  res.json({ success: true });
 });
 
 router.post("/formation/:id", async (req, res) => {

@@ -39,4 +39,5 @@ export type UserState = {
   upgradeItems?: number;
   expCards?: number;
   inventory: Card[];
+  workIdol?: { id: number; name: string; icon_url: string; sprite_url: string } | null;
 };
