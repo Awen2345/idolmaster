@@ -15,6 +15,7 @@ interface PlayerData {
   level: number;
   lastStaminaUpdate?: string;
   staminaDrinks?: number;
+  inventory?: Card[];
 }
 
 export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page: string) => void, formation: (Card | null)[], userId: number }) {
@@ -32,8 +33,8 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
   const [timeToNextStamina, setTimeToNextStamina] = useState<number | null>(null);
 
   // New states for Idol Selection
-  const [idolIcons, setIdolIcons] = useState<any[]>([]);
   const [showIdolSelection, setShowIdolSelection] = useState(false);
+  const [previewCard, setPreviewCard] = useState<Card | null>(null);
   const [workIdol, setWorkIdol] = useState<{ id: number, name: string, icon_url: string, sprite_url: string } | null>(null);
 
   useEffect(() => {
@@ -50,7 +51,8 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
           fans: data.fans,
           level: data.level,
           lastStaminaUpdate: data.lastStaminaUpdate,
-          staminaDrinks: data.staminaDrinks
+          staminaDrinks: data.staminaDrinks,
+          inventory: data.inventory
         });
         if (data.workIdol) {
           setWorkIdol(data.workIdol);
@@ -59,26 +61,25 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
         }
       })
       .catch(err => console.error("Failed to load user data", err));
-
-    // Load available idol icons
-    fetch(`/api/idol-icons`)
-      .then(res => res.json())
-      .then(data => setIdolIcons(data))
-      .catch(err => console.error("Failed to load idol icons", err));
   }, [userId]);
 
-  const selectIdol = async (idolId: number) => {
+  const confirmSelectIdol = async () => {
+    if (!previewCard) return;
     try {
+      // The API endpoint expects idol_id which corresponds to card_id
       const res = await fetch(`/api/user/${userId}/work-idol`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idol_id: idolId })
+        body: JSON.stringify({ idol_id: previewCard.id })
       });
       if (res.ok) {
-        const selected = idolIcons.find(i => i.id === idolId);
-        if (selected) {
-          setWorkIdol(selected);
-        }
+        setWorkIdol({
+          id: previewCard.id,
+          name: previewCard.name,
+          icon_url: previewCard.icon_url || previewCard.img,
+          sprite_url: previewCard.spread_url || previewCard.img
+        });
+        setPreviewCard(null);
         setShowIdolSelection(false);
       }
     } catch (e) {
@@ -464,26 +465,80 @@ export function WorkPage({ onNavigate, formation, userId }: { onNavigate: (page:
       )}
 
       {/* Idol Selection Modal */}
-      {(showIdolSelection || idolIcons.length > 0 && workIdol === null) && (
-        <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+      {(showIdolSelection || workIdol === null) && !previewCard && (
+        <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4">
           <div className="bg-gradient-to-b from-gray-800 to-black border-2 border-pink-400 rounded-xl p-4 w-full max-w-sm text-center shadow-[0_0_20px_rgba(244,114,182,0.3)]">
             <h3 className="text-xl font-bold text-pink-400 mb-2 italic">Select Partner Idol</h3>
-            <p className="text-xs text-gray-300 mb-4">Choose an idol to accompany you during work!</p>
+            <p className="text-xs text-gray-300 mb-4">Choose an idol from your inventory to accompany you!</p>
             
-            <div className="grid grid-cols-3 gap-3 mb-4 max-h-[60vh] overflow-y-auto p-1">
-              {idolIcons.map(icon => (
-                <div key={icon.id} onClick={() => selectIdol(icon.id)} className="cursor-pointer bg-slate-800 border border-slate-600 rounded-lg p-2 flex flex-col items-center hover:border-pink-400 hover:bg-slate-700 transition-colors">
-                  <div className="w-16 h-16 bg-white rounded-full mb-2 overflow-hidden border-2 border-gray-300 shadow-inner">
-                    <img src={icon.icon_url} alt={icon.name} className="w-full h-full object-cover" />
+            <div className="grid grid-cols-4 gap-2 mb-4 max-h-[60vh] overflow-y-auto p-1">
+              {player?.inventory?.map(card => (
+                <div key={card.id} onClick={() => setPreviewCard(card)} className="cursor-pointer bg-slate-800 border border-slate-600 rounded-lg p-1 flex flex-col items-center hover:border-pink-400 hover:bg-slate-700 transition-colors">
+                  <div className="w-14 h-14 bg-white rounded-lg mb-1 overflow-hidden border border-gray-300 shadow-inner flex-shrink-0">
+                    <img src={card.icon_url || card.img} alt={card.name} className="w-full h-full object-cover" />
                   </div>
-                  <span className="text-[10px] text-white font-bold text-center leading-tight">{icon.name}</span>
+                  <span className="text-[8px] text-white font-bold text-center leading-tight truncate w-full">{card.name}</span>
                 </div>
               ))}
             </div>
             
-            {!showIdolSelection && workIdol !== null && (
+            {workIdol !== null && (
               <button onClick={() => setShowIdolSelection(false)} className="w-full py-2 bg-gray-600 hover:bg-gray-500 rounded font-bold text-white transition-colors">Close</button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Floating Popup (Card Preview) */}
+      {previewCard && (
+        <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-slate-900 border-2 border-pink-500 rounded-2xl overflow-hidden shadow-2xl relative">
+            <div className="absolute top-2 right-2 z-10">
+              <button onClick={() => setPreviewCard(null)} className="w-8 h-8 bg-black/50 hover:bg-black text-white rounded-full flex items-center justify-center font-bold">X</button>
+            </div>
+            
+            <div className="w-full aspect-[2/1] relative bg-black">
+              <img src={previewCard.spread_url || previewCard.img} alt={previewCard.name} className="w-full h-full object-cover object-top opacity-90" />
+              <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/90 to-transparent p-4 pb-2">
+                <h2 className="text-2xl font-black text-white italic drop-shadow-md">{previewCard.name}</h2>
+                <div className="flex gap-2 text-sm mt-1">
+                  <span className={`px-2 py-0.5 rounded text-white font-bold ${previewCard.attribute === 'Cute' ? 'bg-pink-500' : previewCard.attribute === 'Cool' ? 'bg-blue-500' : 'bg-yellow-500'}`}>
+                    {previewCard.attribute}
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-gray-700 text-yellow-300 font-bold">{previewCard.rarity}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 grid grid-cols-2 gap-4">
+              <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
+                <div className="text-xs text-slate-400 font-bold mb-1 uppercase tracking-wider">Stats</div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm text-pink-300">Vocal</span>
+                  <span className="text-sm font-bold text-white">{previewCard.atk}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-blue-300">Dance</span>
+                  <span className="text-sm font-bold text-white">{previewCard.def}</span>
+                </div>
+              </div>
+              
+              <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
+                <div className="text-xs text-slate-400 font-bold mb-1 uppercase tracking-wider">Skill</div>
+                <div className="text-sm text-white font-medium leading-tight">
+                  {previewCard.passiveSkill ? previewCard.passiveSkill.description : (previewCard.liveSkill ? previewCard.liveSkill.description : "No skill available.")}
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 pt-0">
+              <button 
+                onClick={confirmSelectIdol}
+                className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-black py-3 rounded-lg shadow-lg transform transition active:scale-95"
+              >
+                SELECT PARTNER
+              </button>
+            </div>
           </div>
         </div>
       )}

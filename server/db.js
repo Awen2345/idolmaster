@@ -154,9 +154,10 @@ export async function setupDatabase() {
 
     CREATE TABLE IF NOT EXISTS idol_icons (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT,
+      card_id INTEGER,
       icon_url TEXT,
-      sprite_url TEXT
+      spread_url TEXT,
+      FOREIGN KEY(card_id) REFERENCES cards(id)
     );
   `);
 
@@ -294,18 +295,43 @@ export async function setupDatabase() {
     }
   }
 
+  // Recreate idol_icons if it's the old schema
+  try {
+    const tableInfo = await db.all("PRAGMA table_info(idol_icons)");
+    if (tableInfo.some(col => col.name === 'name')) {
+        await db.run("DROP TABLE idol_icons");
+        await db.run(`CREATE TABLE idol_icons (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            card_id INTEGER,
+            icon_url TEXT,
+            spread_url TEXT,
+            FOREIGN KEY(card_id) REFERENCES cards(id)
+        )`);
+    }
+  } catch(e) {}
+
   const idolIconCount = await db.get("SELECT COUNT(*) as count FROM idol_icons");
   if (idolIconCount.count === 0) {
-    const initialIcons = [
-      { name: "Uzuki Shimamura", icon_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Uzuki&backgroundColor=ffdfbf", sprite_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Uzuki&backgroundColor=ffdfbf" },
-      { name: "Rin Shibuya", icon_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Rin&backgroundColor=bfe6ff", sprite_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Rin&backgroundColor=bfe6ff" },
-      { name: "Mio Honda", icon_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Mio&backgroundColor=ffffbf", sprite_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Mio&backgroundColor=ffffbf" },
-      { name: "Kaede Takagaki", icon_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Kaede&backgroundColor=bfe6ff", sprite_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Kaede&backgroundColor=bfe6ff" },
-      { name: "Mika Jougasaki", icon_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Mika&backgroundColor=ffffbf", sprite_url: "https://api.dicebear.com/7.x/notionists/svg?seed=Mika&backgroundColor=ffffbf" }
+    // Map standard cards to real cgss ids for hidamarirhodonite
+    const iconMappings = [
+      { card_id: 1, cgss_id: 200045 }, // Rin SSR
+      { card_id: 2, cgss_id: 100063 }, // Uzuki SSR
+      { card_id: 3, cgss_id: 300043 }, // Mio SSR
+      { card_id: 10, cgss_id: 200001 }, // Rin N
+      { card_id: 11, cgss_id: 100001 }, // Uzuki N
+      { card_id: 12, cgss_id: 300001 }, // Mio N
+      { card_id: 13, cgss_id: 200003 }, // Kaede N
+      { card_id: 14, cgss_id: 300003 }, // Mika N
+      { card_id: 15, cgss_id: 300005 }, // Rika N
+      { card_id: 20, cgss_id: 100003 }, 
+      { card_id: 21, cgss_id: 200005 },
+      { card_id: 22, cgss_id: 300007 }
     ];
-    for (const icon of initialIcons) {
-      await db.run(`INSERT INTO idol_icons (name, icon_url, sprite_url) VALUES (?, ?, ?)`,
-        [icon.name, icon.icon_url, icon.sprite_url]);
+    for (const icon of iconMappings) {
+      const icon_url = `https://hidamarirhodonite.kirara.ca/icon_card/${icon.cgss_id}.png`;
+      const spread_url = `https://hidamarirhodonite.kirara.ca/spread/${icon.cgss_id}.png`;
+      await db.run(`INSERT INTO idol_icons (card_id, icon_url, spread_url) VALUES (?, ?, ?)`,
+        [icon.card_id, icon_url, spread_url]);
     }
   }
 

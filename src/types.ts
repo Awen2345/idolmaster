@@ -19,7 +19,9 @@ export type LiveSkill = {
 export type Card = {
   id: number;
   name: string;
-  img: string;
+  img: string; // The default portrait (or placeholder) if spread_url is null
+  icon_url?: string;
+  spread_url?: string;
   atk: number;
   def: number;
   cost: number;

@@ -125,7 +125,13 @@ router.get("/admin/users", async (req, res) => {
 router.get("/user/:id", async (req, res) => {
   const db = await setupDatabase();
   const userId = req.params.id;
-  const user = await db.get("SELECT users.*, idol_icons.icon_url, idol_icons.sprite_url, idol_icons.name as idol_name FROM users LEFT JOIN idol_icons ON users.work_idol_id = idol_icons.id WHERE users.id = ?", [userId]);
+  const user = await db.get(`
+    SELECT users.*, cards.name as idol_name, idol_icons.icon_url, idol_icons.spread_url as sprite_url 
+    FROM users 
+    LEFT JOIN cards ON users.work_idol_id = cards.id 
+    LEFT JOIN idol_icons ON cards.id = idol_icons.card_id 
+    WHERE users.id = ?`, 
+  [userId]);
   if (!user) return res.status(404).json({ error: "User not found" });
 
   // Stamina Regeneration Logic
@@ -153,9 +159,10 @@ router.get("/user/:id", async (req, res) => {
   }
 
   const inventoryRows = await db.all(`
-    SELECT ui.id as inventory_id, c.* 
+    SELECT ui.id as inventory_id, c.*, ii.icon_url, ii.spread_url
     FROM user_inventory ui 
     JOIN cards c ON ui.card_id = c.id 
+    LEFT JOIN idol_icons ii ON c.id = ii.card_id
     WHERE ui.user_id = ?
   `, [userId]);
 
