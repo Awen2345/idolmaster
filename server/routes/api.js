@@ -126,10 +126,9 @@ router.get("/user/:id", async (req, res) => {
   const db = await setupDatabase();
   const userId = req.params.id;
   const user = await db.get(`
-    SELECT users.*, cards.name as idol_name, idol_icons.icon_url, idol_icons.spread_url as sprite_url 
+    SELECT users.*, cards.name as idol_name, cards.icon_url, cards.spread_url as sprite_url 
     FROM users 
     LEFT JOIN cards ON users.work_idol_id = cards.id 
-    LEFT JOIN idol_icons ON cards.id = idol_icons.card_id 
     WHERE users.id = ?`, 
   [userId]);
   if (!user) return res.status(404).json({ error: "User not found" });
@@ -159,10 +158,9 @@ router.get("/user/:id", async (req, res) => {
   }
 
   const inventoryRows = await db.all(`
-    SELECT ui.id as inventory_id, c.*, ii.icon_url, ii.spread_url
+    SELECT ui.id as inventory_id, c.*
     FROM user_inventory ui 
     JOIN cards c ON ui.card_id = c.id 
-    LEFT JOIN idol_icons ii ON c.id = ii.card_id
     WHERE ui.user_id = ?
   `, [userId]);
 
@@ -207,12 +205,6 @@ router.get("/user/:id", async (req, res) => {
     inventory: inventoryRows.map(r => parseSkills({ ...r, id: r.inventory_id, card_id: r.id })),
     formation
   });
-});
-
-router.get("/idol-icons", async (req, res) => {
-  const db = await setupDatabase();
-  const icons = await db.all("SELECT * FROM idol_icons");
-  res.json(icons);
 });
 
 router.post("/user/:id/work-idol", async (req, res) => {
